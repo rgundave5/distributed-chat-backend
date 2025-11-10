@@ -49,4 +49,10 @@ async def login(request: Request):
 # FastAPI receives it, runs endpoint, sends JSON back
 # {"message": "Server is running!"}
 
-
+# login funct - when user logs in, send email, pword --> check if it exists in table --> return true
+# create client file to test
+# hw: complete login so that it checks db to see if email exists, 
+# if it does check if pword = pworod svad in db, if both true then return "logged in" to the client, else print error message on client
+# make login and signup functions that run direclty - move all yhthe logic from client.py - make its own funct
+# learn: python knowledge (freecode camp vids), topics: working w different data types (list, dict, access data, etc)
+# try creating multip;le clietnt.py and run them separately 

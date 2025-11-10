@@ -18,7 +18,10 @@ def add_user(email, password):
         return False
 
 # view all users (for testing)
+# use to verify data is added
 def get_all_users():
     with engine.connect() as conn:
         result = conn.execute(select(users))
         return [dict(row._mapping) for row in result]
+
+# hw: make client file
