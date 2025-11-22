@@ -1,6 +1,8 @@
+# logic.py
 # middleman layer
 from sqlalchemy import insert, select
-from database import users, engine
+from database import users, engine, messages
+from datetime import datetime
 
 # function to add a new user to the users table
 def add_user(email, password):
@@ -56,4 +58,26 @@ def authenticate_user(email, password):
     except Exception as e:
         print("Error adding user:", e)
         return False
+
+def save_message(email, message):
+    try:
+        date = datetime.now()
+        with engine.connect() as conn:
+            conn.execute(insert(messages).values(email=email, message=message, date=date))
+            conn.commit()
+        print(f"Success: Message saved from {email}: {message}")
+        return True
+    except Exception as e:
+        print("Error saving message:", e)
+        return False
+
+def get_all_messages():
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(select(messages))
+            #return [dict(row._mapping) for row in result]
+            return [{"email": row.email, "message": row.message, "date": row.date.isoformat()} for row in result]
+    except Exception as e:
+        print("Error retrieving messages:", e)
+        return []
 

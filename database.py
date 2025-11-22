@@ -1,5 +1,6 @@
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
-
+# database.py
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime
+from datetime import datetime
 # every backend app needs 1. connection to db, 2. description of what tables exist, 
 # 3. command to actually create or initialize those tables
 
@@ -17,8 +18,17 @@ users = Table(
     Column("password", String, nullable=False) 
 )
 
+messages = Table(
+    "messages", metadata,
+    Column("email", String, nullable=False),
+    Column("id", Integer, primary_key=True),
+    Column("message", String, nullable=False),
+    Column("date", DateTime, nullable=False)
+)
+
 # tells SQLAlchemy to create the tables in the database 
 metadata.create_all(engine)
 
 # confirmation message
 print("Data stored successfully.")
+
