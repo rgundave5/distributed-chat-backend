@@ -51,6 +51,9 @@ async def login(request: Request):
         return {"message": "Invalid credentials"}
 
 # chat endpoint
+# sends message 
+# rename endpoints - more descriptive (/chat and /messages ??)
+# consolidate these into one: mesages
 @app.post("/chat")
 async def chat(request: Request):
     data = await request.json() 
@@ -68,10 +71,11 @@ async def chat(request: Request):
     else:
         return {"message": "Invalid credentials"}
 
+# receives message
 # messages endpoint
 @app.post("/messages")
 async def messages(requests: Request):
-    data = await request.json()
+    data = await requests.json()
     email = data.get("email")
     password = data.get("password")
 
@@ -81,6 +85,37 @@ async def messages(requests: Request):
     
     messages = get_all_messages()
     return {"message": "Messages retrieved", "messages": messages}
+
+# task list:
+#   1. add endpoints to our chat app, update existing endpoints
+#   2. update logic so it can handle the new path params 
+#   3. update db logic (tables - store emsssages differently now), returns message id when u send message
+
+# watch: sqlalchemny, databses, how to process it, write codeon your own, dont c & p, 
+
+# systems design for doimg the other chat/messages stuff --> always do ssytems design
+# systems security --> info in url, info must be secure
+# no authentication? then u can talk to js anybody by changing the url {user}
+# i can js copy that url and send message to someone idk --> no security
+# server should have task of deciding if u can access url or send messages on that url 
+# bad idea to put username in path param
+# ok to put gc name or person ur talking to's username (this stuff changes frequently)
+# benefit of chnaging url path (longer or shorter):
+    # can specify versions (so u dont get old data)
+    # main benefits: organization 
+    # in discord u have image id in url by deault, direct access (another benefit)
+    # all info can be stored in url w path params
+    # discord url code 
+    # for images all info is in url 
+
+    # we coudl do message id's
+    # messages/group/send
+    # messages/direct/send
+    # messages/group/receive
+    # messages/direct/receive{message_id}
+
+
+
 
 # to start server run:  uvicorn main:app --reload 
 # FastAPI listens at http://127.0.0.1:8000

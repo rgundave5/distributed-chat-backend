@@ -38,12 +38,18 @@ class Client:
 
     # ------------messages------------
     def messages(self, message):
+        # tells us where to send 
+        # mailbox ex: we want to send to client's mailbox
+        # specifies where message ends up
         message_url =  f"http://{address}:{port}/chat"
+        # chat endpoint: this tells me this person wants to chat (functionality)
+        # 
         message_payload = {
             "email":  self.email,
             "password":  self.password,
             "message":  message
         }
+        # requests makes it easier (python lib)
         message_response = requests.post(message_url, json=message_payload)
         print(f"{self.name}'s message:", message_response.json())
         return message_response.json()
@@ -67,7 +73,18 @@ class Client:
             print(f"Error decoding JSON from server: {e}, raw response:", response.text)
             return None
 
+# endpoints
+# no https, 
+# buy_url = f"http://{address}:{port}/buy/items"
+# buy_url = f"http://{address}:{port}/buy/services"
+# sell_url = f"http://{address}:{port}/sell/items"
+# sell_url = f"http://{address}:{port}/sell/services"
+    # endpoint within an endpoint (buy/sell services & items)
+    # easy too do this
+    # hw: watch freecodecamp fastapi course for beginners
+    # hw to do: 
 
+# edit_profile_url = f"http://{address}:{port}/edit"
 
 
 # ------------main------------
@@ -76,7 +93,7 @@ if __name__=="__main__":
     # test signup
     # multiple clients
     client1 = Client("JohnDoe", "johndoe12@gmail.com", "junk123")
-    client2 = Client("JohnStar", "johndoe12@gmail.com", "junk123")
+    client2 = Client("JohnStar", "johndoe13@gmail.com", "junk123")
     client3 = Client("GeorgeFire", "george12@gmail.com", "pass")
 
     # Signup users
