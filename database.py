@@ -20,8 +20,10 @@ users = Table(
 
 messages = Table(
     "messages", metadata,
-    Column("email", String, nullable=False),
     Column("id", Integer, primary_key=True),
+    Column("sender", String, nullable=False),
+    Column("receiver", String, nullable=True),   # direct messages
+    Column("group_name", String, nullable=True), # group messages
     Column("message", String, nullable=False),
     Column("date", DateTime, nullable=False)
 )

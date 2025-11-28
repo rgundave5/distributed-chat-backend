@@ -53,31 +53,93 @@ def authenticate_user(email, password):
                 print(f"No user found with email: {email}")
                 return False
 
-        print(f"Success: User {email} added!")
+        # print(f"Success: User {email} added!")
         return True
     except Exception as e:
         print("Error adding user:", e)
         return False
 
-def save_message(email, message):
+# -----------message saving logic----------------------------------------------------
+def save_direct_message(sender, receiver, message):
     try:
-        date = datetime.now()
         with engine.connect() as conn:
-            conn.execute(insert(messages).values(email=email, message=message, date=date))
+            result = conn.execute(
+                insert(messages).values(
+                    sender = sender,
+                    receiver = receiver,
+                    message = message,
+                    date = datetime.now(),
+                )
+            )
             conn.commit()
-        print(f"Success: Message saved from {email}: {message}")
-        return True
-    except Exception as e:
-        print("Error saving message:", e)
-        return False
+            message_id = result.inserted_primary_key[0]
+            print(f"DIRECT Saved message {message_id} from {sender} to {receiver}")
+            return message_id
 
-def get_all_messages():
+    except Exception as e:
+        print("Error saving direct message:", e)
+        return None
+
+
+def save_group_message(sender, group_name, message):
     try:
         with engine.connect() as conn:
-            result = conn.execute(select(messages))
-            #return [dict(row._mapping) for row in result]
-            return [{"email": row.email, "message": row.message, "date": row.date.isoformat()} for row in result]
-    except Exception as e:
-        print("Error retrieving messages:", e)
-        return []
+            result = conn.execute(
+                insert(messages).values(
+                    sender=sender,
+                    receiver=None,
+                    group_name=group_name,
+                    message=message,
+                    date=datetime.now(),
+                )
+            )
+            conn.commit()
 
+            message_id = result.inserted_primary_key[0]
+            print(f"GROUP Saved message {message_id} from {sender} in {group_name}")
+            return message_id
+
+    except Exception as e:
+        print("Error saving group message:", e)
+        return None
+
+# -----------message receiving logic----------------------------------------------------
+def get_direct_messages(sender, receiver):
+    try:
+        with engine.connect() as conn:
+            query = select(messages).where(
+                ((messages.c.sender == sender) & (messages.c.receiver == receiver)) |
+                ((messages.c.sender == receiver) & (messages.c.receiver == sender))
+            )
+            result = conn.execute(query)
+            return [dict(row._mapping) for row in result]
+    except Exception as e:
+        print("Error receiving direct message:", e)
+        return None
+
+def get_group_messages(group_name):
+    try:
+        with engine.connect() as conn:
+            query = select(messages).where(messages.c.group_name == group_name)
+            result = conn.execute(query)
+            return [dict(row._mapping) for row in result]
+    except Exception as e:
+        print("Error receiving group message:", e)
+        return None
+
+#----------------------------------------------
+def get_message_by_id(message_id):
+    # select from messages table where message id matches
+    #query = messages.select().where(messages.c.id == message_id)
+    # get one row --> if the message exists then result becomes a row object
+    #result = engine.execute(query).fetchone()
+    # convert the SQL row into a Python dictionary
+    #return dict(result) if result else None
+    try:
+        with engine.connect() as conn:
+            query = select(messages).where(messages.c.id == message_id)
+            result = conn.execute(query).fetchone()
+            return dict(result._mapping) if result else None
+    except Exception as e:
+        print("Error retrieving message:", e)
+        return None
