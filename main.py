@@ -77,8 +77,9 @@ async def send_direct_message(request: Request):
         "id": message_id
     }
 
-@app.post("/messages/direct/receive/{message_id}")
-async def receive_direct_message(message_id: int):
+# swap message id w receiver or gc --> do this in url, or request's body
+@app.post("/messages/direct/receive/{dm_id}")
+async def receive_direct_message(dm_id: int, request: Request):
     data = await request.json()
     email = data.get("email")
     password = data.get("password")
@@ -122,8 +123,8 @@ async def send_group_message(request: Request):
         "id": message_id
     }
 
-@app.post("/messages/group/receive/{message_id}")
-async def receive_group_message(message_id: int):
+@app.post("/messages/group/receive/{groupchat_id}")
+async def receive_group_message(gc_id: int, request: Request):
     data = await request.json()
     email = data.get("email")
     password = data.get("password")
@@ -140,6 +141,19 @@ async def receive_group_message(message_id: int):
         "data": message
     }
 
+# 12/3
+# client doesnt have message id --> receiving logic?
+# receive messages by gc id or receiver id --> maybe add column in messages table for group and direct (split)
+# all messages in direct message
+# make sure messages are specific to the receiver (w receiver id and group chat id)
+# i could be getting messages not sent to me
+# option1: store everything in gc id or direct message id --> do this
+# option2: uses existing receive message id funct, store message id itself --> more requests needed for each message fetched (less efficient)
+# update client too!
+# freecodecamp: sql basics (foreign key tutorial) WATCH
+
+# 
+
 # 11/25 update
 # 1. added new endpoints:
 # POST /messages/direct/send
@@ -147,7 +161,7 @@ async def receive_group_message(message_id: int):
 # POST /messages/group/send
 # GET  /messages/group/receive/{message_id}
 # 2. added messages table to db
-# 3. logic.py: added message saving logic but didn't do message receiving logic
+# 3. logic.py: added message saving logic and message receiving logic
 # 4. logic.py: get_message_by_id
 # 5. updated client.py
 
@@ -182,9 +196,6 @@ async def receive_group_message(message_id: int):
     # messages/group/receive
     # messages/direct/receive{message_id}
 
-
-
-
 # to start server run:  uvicorn main:app --reload 
 # FastAPI listens at http://127.0.0.1:8000
 # send a request using curl command
@@ -206,3 +217,7 @@ async def receive_group_message(message_id: int):
             # to authenticate user first, read messages from DB, send them back to the client as JSON
     # 4. logic.py - added helper function get_all_messages() so that server can fetch messages
     # 5. 
+
+
+# 11/28/25 notes:
+# 

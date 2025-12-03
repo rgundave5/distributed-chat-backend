@@ -53,10 +53,8 @@ def authenticate_user(email, password):
                 print(f"No user found with email: {email}")
                 return False
 
-        # print(f"Success: User {email} added!")
-        return True
     except Exception as e:
-        print("Error adding user:", e)
+        print("Error authenticating user:", e)
         return False
 
 # -----------message saving logic----------------------------------------------------
@@ -104,12 +102,16 @@ def save_group_message(sender, group_name, message):
         return None
 
 # -----------message receiving logic----------------------------------------------------
-def get_direct_messages(sender, receiver):
+# if it dne, it will create a dm 
+# check if convo exists first, if nto create it
+# 1. for any convo of type dircet, fetch all direct convo rows
+# 2. for every direct convo row, return any user emails where the convo id of that participants row = convestaions row we are iterating on
+# refer to ss
+def get_or_create_dm(user1, user2):
     try:
         with engine.connect() as conn:
-            query = select(messages).where(
-                ((messages.c.sender == sender) & (messages.c.receiver == receiver)) |
-                ((messages.c.sender == receiver) & (messages.c.receiver == sender))
+            # update!
+            query = select(messages).where((messages.c.dm_id == dm_id)
             )
             result = conn.execute(query)
             return [dict(row._mapping) for row in result]
@@ -117,10 +119,12 @@ def get_direct_messages(sender, receiver):
         print("Error receiving direct message:", e)
         return None
 
-def get_group_messages(group_name):
+# param is array of participants
+def create_group_convo(gc_name, participants_array):
     try:
         with engine.connect() as conn:
-            query = select(messages).where(messages.c.group_name == group_name)
+            # update!
+            query = select(messages).where(messages.c.gc_id == gc_id)
             result = conn.execute(query)
             return [dict(row._mapping) for row in result]
     except Exception as e:
