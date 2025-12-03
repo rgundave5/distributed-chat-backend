@@ -54,7 +54,7 @@ class Client:
         #print(f"{self.name}'s message:", message_response.json())
         #return message_response.json()
 
-    # -----------direct messages----------
+    # -----------send direct messages----------
     def send_direct(self, receiver, text):
         url = f"http://{address}:{port}/messages/direct/send"
         payload = {
@@ -67,7 +67,7 @@ class Client:
         print("DIRECT:", response.json())
         return response.json()
         
-    # ------------group messages------------
+    # ------------send group messages------------
     def send_group(self, group_name, text):
         url = f"http://{address}:{port}/messages/group/send"
         payload = {
@@ -105,7 +105,7 @@ class Client:
         response = requests.post(url, json=payload)
         print(f"{self.name} received group message:", response.json())
         return response.json()
-        
+
 # endpoints
 # no https, 
 # buy_url = f"http://{address}:{port}/buy/items"
@@ -140,19 +140,15 @@ if __name__=="__main__":
     client3.login()
 
     # Send direct messages
-    client1.send_direct("Hello everyone! - JohnD")
-    client3.send_direct("Hi John! - George")
+    client1.send_direct("johndoe14@gmail.com", "Hello John13!")
+    client3.send_direct("johndoe13@gmail.com", "Hi John14!")
 
-    # Retrieve messages from server
-    client1.get_messages()
-    client3.get_messages()
-
+    
     # test correct and incorrect login attempts
     #if client1_signup_response.get("message") == "Data stored successfully":
         #client1.login()  # correct
         #client1.password = "wrongpass"
         #client1.login()  # incorrect
-
 
 
 # metavariable: describe python file/environment, cant write to them, js read their vals --> use to verify 
