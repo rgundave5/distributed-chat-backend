@@ -1,7 +1,7 @@
 # logic.py
 # middleman layer
-from sqlalchemy import insert, select
-from database import users, engine, messages
+from sqlalchemy import insert, select, ForeignKey, and_
+from database import users, engine, conversations, convo_participants
 from datetime import datetime
 
 # function to add a new user to the users table
@@ -58,48 +58,25 @@ def authenticate_user(email, password):
         return False
 
 # -----------message saving logic----------------------------------------------------
-def save_direct_message(sender, receiver, message):
+def save_message(conversation_id, sender, message):
     try:
         with engine.connect() as conn:
             result = conn.execute(
                 insert(messages).values(
-                    sender = sender,
-                    receiver = receiver,
-                    message = message,
-                    date = datetime.now(),
-                )
-            )
-            conn.commit()
-            message_id = result.inserted_primary_key[0]
-            print(f"DIRECT Saved message {message_id} from {sender} to {receiver}")
-            return message_id
-
-    except Exception as e:
-        print("Error saving direct message:", e)
-        return None
-
-
-def save_group_message(sender, group_name, message):
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(
-                insert(messages).values(
+                    conversation_id=conversation_id,
                     sender=sender,
-                    receiver=None,
-                    group_name=group_name,
                     message=message,
-                    date=datetime.now(),
+                    date=datetime.utcnow()
                 )
             )
             conn.commit()
-
-            message_id = result.inserted_primary_key[0]
-            print(f"GROUP Saved message {message_id} from {sender} in {group_name}")
-            return message_id
-
+            return result.inserted_primary_key[0]
     except Exception as e:
-        print("Error saving group message:", e)
+        print("Error saving message:", e)
         return None
+
+
+
 
 # -----------message receiving logic----------------------------------------------------
 # if it dne, it will create a dm 
@@ -107,17 +84,44 @@ def save_group_message(sender, group_name, message):
 # 1. for any convo of type dircet, fetch all direct convo rows
 # 2. for every direct convo row, return any user emails where the convo id of that participants row = convestaions row we are iterating on
 # refer to ss
-def get_or_create_dm(user1, user2):
-    try:
-        with engine.connect() as conn:
-            # update!
-            query = select(messages).where((messages.c.dm_id == dm_id)
+# create or reuse direct convo
+##
+def get_or_create_direct_conversation(user1, user2):
+    with engine.connect() as conn:
+        # find existing direct convo
+        query = (
+            select(conversations.c.id)
+            .select_from(
+                conversations.join(
+                    convo_participants,
+                    conversations.c.id == convo_participants.c.conversation_id
+                )
             )
-            result = conn.execute(query)
-            return [dict(row._mapping) for row in result]
-    except Exception as e:
-        print("Error receiving direct message:", e)
-        return None
+            .where(conversations.c.type == "direct")
+            .where(convo_participants.c.user_email.in_([user1, user2]))
+            .group_by(conversations.c.id)
+            .having(conversations.c.id.count() == 2)
+        )
+
+        result = conn.execute(query).fetchone()
+        if result:
+            return result[0]
+
+        # create new convo
+        convo_result = conn.execute(
+            insert(conversations).values(type="direct")
+        )
+        conn.commit()
+        convo_id = convo_result.inserted_primary_key[0]
+
+        conn.execute(insert(convo_participants), [
+            {"user_email": user1, "conversation_id": convo_id},
+            {"user_email": user2, "conversation_id": convo_id},
+        ])
+        conn.commit()
+
+        return convo_id
+
 
 # param is array of participants
 def create_group_convo(gc_name, participants_array):
@@ -133,12 +137,6 @@ def create_group_convo(gc_name, participants_array):
 
 #----------------------------------------------
 def get_message_by_id(message_id):
-    # select from messages table where message id matches
-    #query = messages.select().where(messages.c.id == message_id)
-    # get one row --> if the message exists then result becomes a row object
-    #result = engine.execute(query).fetchone()
-    # convert the SQL row into a Python dictionary
-    #return dict(result) if result else None
     try:
         with engine.connect() as conn:
             query = select(messages).where(messages.c.id == message_id)
@@ -147,3 +145,16 @@ def get_message_by_id(message_id):
     except Exception as e:
         print("Error retrieving message:", e)
         return None
+
+#---------------------------------------------------
+# replaces get_direct_message
+##
+def get_messages(self, conversation_id):
+    url = f"http://{address}:{port}/messages/receive/{conversation_id}"
+    payload = {
+        "email": self.email,
+        "password": self.password
+    }
+    response = requests.post(url, json=payload)
+    print(response.json())
+    return response.json()

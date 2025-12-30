@@ -1,5 +1,5 @@
 # database.py
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, ForeignKey
 from datetime import datetime
 # every backend app needs 1. connection to db, 2. description of what tables exist, 
 # 3. command to actually create or initialize those tables
@@ -54,22 +54,21 @@ convo_participants = Table(
 
 # dm id table and gc id table
 # store in messages (stores actual message) and dm id table when sending a dm
-dm_id = Table(
-    "dm_id", metadata,
-    Column("id", Integer, primary_key=True),
-    Column("message_id", Integer, nullable=False),
-    Column("sender", String, nullable=False),
-    Column("receiver", String, nullable=True)
+#dm_id = Table(
+    #"dm_id", metadata,
+    #Column("id", Integer, primary_key=True),
+    #Column("message_id", Integer, nullable=False),
+    #Column("sender", String, nullable=False),
+    #Column("receiver", String, nullable=True)
+#)
 
-)
-
-gc_id = Table(
-    "gc_id", metadata,
-    Column("gc_id", Integer, primary_key=True),
-    Column("message_id", Integer, nullable=False),
-    Column("sender", String, nullable=False),
-    Column("group_name", String, nullable=True)
-)
+#gc_id = Table(
+    #"gc_id", metadata,
+    #Column("gc_id", Integer, primary_key=True),
+    #Column("message_id", Integer, nullable=False),
+    #Column("sender", String, nullable=False),
+    #Column("group_name", String, nullable=True)
+#)
 
 
 # tells SQLAlchemy to create the tables in the database 

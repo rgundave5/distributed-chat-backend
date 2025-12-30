@@ -105,6 +105,17 @@ class Client:
         response = requests.post(url, json=payload)
         print(f"{self.name} received group message:", response.json())
         return response.json()
+    #--------------------------------------------
+    def get_messages(self, conversation_id):
+        url = f"http://{address}:{port}/messages/receive/{conversation_id}"
+        payload = {
+            "email": self.email,
+            "password": self.password
+        }
+        response = requests.post(url, json=payload)
+        print(response.json())
+        return response.json()
+
 
 # endpoints
 # no https, 

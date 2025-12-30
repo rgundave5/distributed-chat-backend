@@ -65,37 +65,47 @@ async def send_direct_message(request: Request):
 
     if not authenticate_user(email, password):
         return {"message": "Invalid credentials"} 
-   
-    message_id = save_direct_message(
-        sender=email,
-        receiver=receiver,
-        message=message_text
-    )
+   ##
+    convo_id = get_or_create_direct_conversation(sender, receiver)
+    msg_id = save_message(convo_id, sender, text)
 
     return {
-        "message": "Direct message sent",
-        "id": message_id
+        "message": "Sent",
+        "conversation_id": convo_id,
+        "message_id": msg_id
     }
 
 # swap message id w receiver or gc --> do this in url, or request's body
-@app.post("/messages/direct/receive/{dm_id}")
-async def receive_direct_message(dm_id: int, request: Request):
+@app.post("/messages/receive/{conversation_id}")
+async def receive_messages(conversation_id: int, request: Request):
     data = await request.json()
     email = data.get("email")
     password = data.get("password")
 
     if not authenticate_user(email, password):
         return {"message": "Invalid credentials"}
+    ##
+    with engine.connect() as conn:
+        membership = conn.execute(
+            select(convo_participants)
+            .where(
+                (convo_participants.c.conversation_id == conversation_id) &
+                (convo_participants.c.user_email == email)
+            )
+        ).fetchone()
 
-    message = get_message_by_id(message_id)
+        if not membership:
+            return {"error": "Access denied"}
 
-    if not message or message["receiver"] is None:
-        return {"message": "Message not found"}
+        msgs = conn.execute(
+            select(messages)
+            .where(messages.c.conversation_id == conversation_id)
+            .order_by(messages.c.date)
+        )
 
-    return {
-        "message": "Direct message retrieved",
-        "data": message
-    }
+        return {
+            "messages": [dict(row._mapping) for row in msgs]
+        }
 
 # ------------------------------------------------------
 # GROUP MESSAGE ENDPOINTS
