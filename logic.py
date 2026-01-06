@@ -1,7 +1,7 @@
 # logic.py
 # middleman layer
 from sqlalchemy import insert, select, ForeignKey, and_
-from database import users, engine, conversations, convo_participants
+from database import users, engine, conversations, convo_participants, messages
 from datetime import datetime
 
 # function to add a new user to the users table
@@ -57,25 +57,6 @@ def authenticate_user(email, password):
         print("Error authenticating user:", e)
         return False
 
-# -----------message saving logic----------------------------------------------------
-def save_message(conversation_id, sender, message):
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(
-                insert(messages).values(
-                    conversation_id=conversation_id,
-                    sender=sender,
-                    message=message,
-                    date=datetime.utcnow()
-                )
-            )
-            conn.commit()
-            return result.inserted_primary_key[0]
-    except Exception as e:
-        print("Error saving message:", e)
-        return None
-
-
 
 
 # -----------message receiving logic----------------------------------------------------
@@ -85,8 +66,13 @@ def save_message(conversation_id, sender, message):
 # 2. for every direct convo row, return any user emails where the convo id of that participants row = convestaions row we are iterating on
 # refer to ss
 # create or reuse direct convo
+# allows next messages to reuse same conversation
 ##
 def get_or_create_direct_conversation(user1, user2):
+    # could raise error 
+    if (user1 == user2):
+        raise ValueError("user 1 and 2 are the same") 
+    
     with engine.connect() as conn:
         # find existing direct convo
         query = (
@@ -124,37 +110,104 @@ def get_or_create_direct_conversation(user1, user2):
 
 
 # param is array of participants
+# gc names are unique, no duplicates
+# check 1: is gc_name valid, if string itself is valid, could also check if it exists in the db
+# check 2: check if there are at least 3 users (valid array)
 def create_group_convo(gc_name, participants_array):
+    if (gc_name==None or gc_name=="" or len(participants_array) < 3):
+        return None
+
     try:
         with engine.connect() as conn:
-            # update!
-            query = select(messages).where(messages.c.gc_id == gc_id)
-            result = conn.execute(query)
-            return [dict(row._mapping) for row in result]
+            result = conn.execute(
+                # id param can be omitted handled already
+                insert("conversations").values(type="group", name=gc_name)
+            )
+            convo_id = result.inserted_primary_key # gives primary key of result (convo id)
+            # update particpants table with new partipants
+            for index in participants_array:
+                result = conn.execute(
+                    insert(convo_participants).values(user_email=index, convo_id=convo_id)
+                )
+            conn.commit()
+            return convo_id
     except Exception as e:
         print("Error receiving group message:", e)
         return None
 
 #----------------------------------------------
-def get_message_by_id(message_id):
+# returns messages in convo up to the limit
+# OR returns messages after message_id 
+def get_message_by_convo_id(convo_id, limit=50, after_message_id):
+    # limit variable to avoid spamming
+    # message_id var in case user wants 
     try:
+        # goal: to be able to get a list of all messages from a specific convo using convo id
         with engine.connect() as conn:
-            query = select(messages).where(messages.c.id == message_id)
-            result = conn.execute(query).fetchone()
-            return dict(result._mapping) if result else None
+            query = (
+                select(messages)
+                .where(messages.c.conversation_id == convo_id)
+            )
+            # if clients wants message AFTER a certain message
+            if after_message_id is not None:
+                query = query.where(message.c.id > after_message_if)
+            # if it's none then just continue with ordering
+            query = query.order_by(messages.c.date.asc())
+
+            # limit messages returned
+            query = query.limit(limit)
+            result = conn.execute(query)
+
+            # Each row is a SQLAlchemy Row object in: result = conn.execute(query)
+            # SQL (database rows) --> Python dictionaries
+            # row._mapping is a mapping-like object
+            # this line converts the row mapping object to a python dict
+            # python dict --> fast api --> JSON response
+            return [dict(result._mapping) for row in result]
+
     except Exception as e:
         print("Error retrieving message:", e)
         return None
 
-#---------------------------------------------------
-# replaces get_direct_message
-##
-def get_messages(self, conversation_id):
-    url = f"http://{address}:{port}/messages/receive/{conversation_id}"
-    payload = {
-        "email": self.email,
-        "password": self.password
-    }
-    response = requests.post(url, json=payload)
-    print(response.json())
-    return response.json()
+# -----------message saving logic----------------------------------------------------
+# must check if convo exists in the first place
+# sender auth, check if sender belongs to convo given by convo id
+def save_message(conversation_id, sender, message):
+    try:
+        with engine.connect() as conn:
+            # check if convo exists in db
+            conv = conn.execute(
+                select(conversations.c.id).where(conversation.c.id == conversation_id)
+            ).fetchone()
+
+            if not conv:
+                raise Execption("Conversation does not exist")
+
+            # check membership (if sender belongs to convo)
+            membership = conn.execute(
+                select(convo_participants.c.convo_id)
+                .where(
+                    # 2 checks: convo id exists and email matches sender's
+                    (conversations.c.convo_id == conversation_id) &
+                    (conversations.c.user_email == sender)
+                )
+            ).fetchone()
+
+            if not membership:
+                raise Execption("Sender not authorized")
+
+            result = conn.execute(
+                insert(messages).values(
+                    conversation_id=conversation_id,
+                    sender=sender,
+                    message=message,
+                    date=datetime.utcnow()
+                )
+            )
+            conn.commit()
+            # meaning of this line: Return the ID of the row that was just inserted into the db
+            # why do we need to return the message id: client needs it for future messages
+            return result.inserted_primary_key[0]
+    except Exception as e:
+        print("Error saving message:", e)
+        return None

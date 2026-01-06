@@ -6,6 +6,9 @@ from logic import add_user, authenticate_user, save_direct_message, save_group_m
 # create a FastAPI "instance"
 app = FastAPI()
 
+# An async function is a special function that handles long-running tasks 
+# (like network requests or file reading) without freezing your application
+#   must use await keyword --> data = await request.json()
 # confirmation check that server is running
 @app.get("/")
 async def root():
@@ -85,6 +88,7 @@ async def receive_messages(conversation_id: int, request: Request):
     if not authenticate_user(email, password):
         return {"message": "Invalid credentials"}
     ##
+    # verify membership (2nd security check)
     with engine.connect() as conn:
         membership = conn.execute(
             select(convo_participants)
@@ -150,6 +154,28 @@ async def receive_group_message(gc_id: int, request: Request):
         "message": "Group message retrieved",
         "data": message
     }
+
+
+# Update:
+# Videos: 
+#   ! How the Web Works HTTP REST APIs
+#   ! python syntax specific to chat app
+#   ! SQL Tutorial - Full Database Course
+#       sql (language) --> sqlite (db) --> sqlalchemy (translator (ORM): python -> sql -> sends to sqlite)
+#   Database Design
+#   SQLAlchemy Core
+#   FastAPI & FastAPI Security
+#   Backend System Design Basics
+#   Design a Chat System System Design Interview
+#   Distributed Systems
+# Understanding existing code: 
+# HW: finished get_messages_by_convo_id, save_messages
+
+# 12/30
+# finish get_messages_by_convo_id in logic.py
+# try to start save_messages 
+# ask abt combining mentorship program w gdgc (proposal), talk to harshada 
+
 
 # 12/3
 # client doesnt have message id --> receiving logic?
@@ -227,7 +253,3 @@ async def receive_group_message(gc_id: int, request: Request):
             # to authenticate user first, read messages from DB, send them back to the client as JSON
     # 4. logic.py - added helper function get_all_messages() so that server can fetch messages
     # 5. 
-
-
-# 11/28/25 notes:
-# 

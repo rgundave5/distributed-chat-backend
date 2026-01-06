@@ -45,11 +45,13 @@ conversations = Table(
 convo_participants = Table(
     "convo_participants", metadata,
     Column("id", Integer, primary_key=True),
-    Column("user_email", String, nullable=False), # sql doesnt allow arrays cleanly, how to show gc particpants
+    Column("user_email", ForeignKey("users.email"), String, nullable=False), # sql doesnt allow arrays cleanly, how to show gc particpants
     # use foreign key: way to use external table key, js refers to the id of another table (more direct connection)
     # refer to diagram for this table "id | user_email | convo_id"
-    Column("convo_id", ForeignKey("conversations.id"), nullable=False)
     # in ten gc, my convo id will be diff for each gc
+    Column("convo_id", ForeignKey("conversations.id"), nullable=False)
+    # unique constraint: constraint that forces two values to not be same, no two users in same convo
+    UniqueConstraint("user_email", "convo_id", name="unique_user_convo")   
 )
 
 # dm id table and gc id table
