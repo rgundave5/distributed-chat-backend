@@ -36,76 +36,21 @@ class Client:
         print(f"{self.name} login response:", login_response.json())
         return login_response.json()
 
-    # ------------messages------------
-    #def messages(self, message):
-        # tells us where to send 
-        # mailbox ex: we want to send to client's mailbox
-        # specifies where message ends up
-        #message_url =  f"http://{address}:{port}/chat"
-        # chat endpoint: this tells me this person wants to chat (functionality)
-        # 
-       # message_payload = {
-           # "email":  self.email,
-            #"password":  self.password,
-            #"message":  message
-       # }
-        # requests makes it easier (python lib)
-       # message_response = requests.post(message_url, json=message_payload)
-        #print(f"{self.name}'s message:", message_response.json())
-        #return message_response.json()
 
-    # -----------send direct messages----------
-    def send_direct(self, receiver, text):
-        url = f"http://{address}:{port}/messages/direct/send"
+    # ------------send messages------------
+    def send_messages(self, conversation_id, text):
+        url = f"http://{address}:{port}/messages/send"
         payload = {
             "sender": self.email,
             "password": self.password,
-            "receiver": receiver,
+            "conversation_id": conversation_id,
             "message": text
         }
         response = requests.post(url, json=payload)
-        print("DIRECT:", response.json())
-        return response.json()
-        
-    # ------------send group messages------------
-    def send_group(self, group_name, text):
-        url = f"http://{address}:{port}/messages/group/send"
-        payload = {
-            "sender": self.email,
-            "password": self.password,
-            "group_name": group_name,
-            "message": text
-        }
-        response = requests.post(url, json=payload)
-        print("GROUP:", response.json())
+        print(response.json())
         return response.json()
 
-    # ------------get direct messages------------
-    def get_direct_message(self, message_id):
-        url = f"http://{address}:{port}/messages/direct/receive/{message_id}"
-
-        payload = {
-            "email": self.email,
-            "password": self.password
-        }
-
-        response = requests.post(url, json=payload)
-        print(f"{self.name} received direct message:", response.json())
-        return response.json()
-    
-    # ------------get group messages------------
-    def get_group_message(self, message_id):
-        url = f"http://{address}:{port}/messages/group/receive/{message_id}"
-
-        payload = {
-            "email": self.email,
-            "password": self.password
-        }
-
-        response = requests.post(url, json=payload)
-        print(f"{self.name} received group message:", response.json())
-        return response.json()
-    #--------------------------------------------
+    #---------------receive messages--------
     def get_messages(self, conversation_id):
         url = f"http://{address}:{port}/messages/receive/{conversation_id}"
         payload = {
@@ -136,8 +81,8 @@ if __name__=="__main__":
     print("Running")
     # test signup
     # multiple clients
-    client1 = Client("JerrySeinfeld", "johndoe13@gmail.com", "junk123")
-    client2 = Client("JohnTravolta", "johndoe14@gmail.com", "junk123")
+    client1 = Client("JerrySeinfeld", "johndoe15@gmail.com", "junk123")
+    client2 = Client("JohnTravolta", "johndoe16@gmail.com", "junk123")
     client3 = Client("GeorgeP", "george12@gmail.com", "pass")
 
     # Signup users
@@ -151,8 +96,8 @@ if __name__=="__main__":
     client3.login()
 
     # Send direct messages
-    client1.send_direct("johndoe14@gmail.com", "Hello John13!")
-    client3.send_direct("johndoe13@gmail.com", "Hi John14!")
+    client1.send_messages("johndoe15@gmail.com", "Hello John16!")
+    client3.send_messages("johndoe16@gmail.com", "Hi JohnD15!")
 
     
     # test correct and incorrect login attempts
@@ -177,4 +122,4 @@ if __name__=="__main__":
 
 
 
-# 107,102, 130 (hard programming), marco r (ece 30 chill)
+# 107,102, 130 (hard programming)

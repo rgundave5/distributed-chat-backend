@@ -1,7 +1,15 @@
 # main.py
 # START FastAPI SERVER (from FastAPI's first steps)
 from fastapi import FastAPI, Request
-from logic import add_user, authenticate_user, save_direct_message, save_group_message, get_message_by_id
+from logic import (
+    add_user,
+    authenticate_user,
+    save_message,
+    get_message_by_convo_id,
+    create_group_convo,
+    get_or_create_direct_conversation,
+    user_exists
+)
 
 # create a FastAPI "instance"
 app = FastAPI()
@@ -43,7 +51,7 @@ async def signup(request: Request):
 # async def or just def can be used
 async def login(request: Request):
     data = await request.json() 
-    # added these two lines after making authenticate_user 
+
     email = data.get("email")
     password = data.get("password")
     
@@ -55,22 +63,26 @@ async def login(request: Request):
 
 
 # ------------------------------------------------------
-# DIRECT MESSAGE ENDPOINTS
+# Message actions
 # ------------------------------------------------------
-
-@app.post("/messages/direct/send")
-async def send_direct_message(request: Request):
+# just have messages/send, same for messages/receive
+@app.post("/messages/send")
+async def send_message(request: Request):
     data = await request.json() 
     email = data.get("sender")
     password = data.get("password")
-    receiver = data.get("receiver")
+    # not needed
+    #receiver = data.get("receiver")
+    # update variables
     message_text = data.get("message")
+    convo_id = data.get("conversation_id")
 
     if not authenticate_user(email, password):
         return {"message": "Invalid credentials"} 
-   ##
-    convo_id = get_or_create_direct_conversation(sender, receiver)
-    msg_id = save_message(convo_id, sender, text)
+
+    # make funct to chcek if convo id is valid in logic.py
+    # check if user exists in convo with funct in logic.py
+    msg_id = save_message(convo_id, email, message_text)
 
     return {
         "message": "Sent",
@@ -111,50 +123,65 @@ async def receive_messages(conversation_id: int, request: Request):
             "messages": [dict(row._mapping) for row in msgs]
         }
 
-# ------------------------------------------------------
-# GROUP MESSAGE ENDPOINTS
-# ------------------------------------------------------
-@app.post("/messages/group/send")
-async def send_group_message(request: Request):
-    data = await request.json()
-
-    email = data.get("sender")
-    password = data.get("password")
-    group_name = data.get("group_name")
-    message_text = data.get("message")
-
-    if not authenticate_user(email, password):
-        return {"message": "Invalid credentials"}
-
-    message_id = save_group_message(
-        sender=email,
-        group_name=group_name,
-        message=message_text
-    )
-
-    return {
-        "message": "Group message sent",
-        "id": message_id
-    }
-
-@app.post("/messages/group/receive/{groupchat_id}")
-async def receive_group_message(gc_id: int, request: Request):
+# -----------------------------------------------------------
+# Conversation creation
+# -----------------------------------------------------------
+@app.post("/conversations/group")
+async def create_group_conversation(request: Request):
     data = await request.json()
     email = data.get("email")
     password = data.get("password")
+    participants = data.get("participants")
 
     if not authenticate_user(email, password):
         return {"message": "Invalid credentials"}
-    message = get_message_by_id(message_id)
 
-    if not message or message["group_name"] is None:
-        return {"message": "Message not found"}
+    if email not in participants:
+        participants.append(email)
+    
+    for key in participants:
+        if user_exists(key) is False: 
+            return {"message": "Invalid credentials, participants are invalid"}
+
+    convo_id = create_group_convo(gc_name, participants_array)
+
+    if convo_id is None:
+        return {"message": "Failed to create group"}
 
     return {
-        "message": "Group message retrieved",
-        "data": message
+        "message": "Group created",
+        "conversation_id": convo_id
     }
 
+@app.post("/conversations/direct")
+async def create_direct_conversation(request: Request):
+    data = await request.json()
+
+    email = data.get("email")
+    password = data.get("password")
+    other_user = data.get("other_user")
+
+    if not authenticate_user(email, password):
+        return {"message": "Invalid credentials, email is invalid"}
+
+    if not user_exists(other_user):
+        return {"message": "Invalid credentials, other email provided is invalid"}
+
+    convo_id = get_or_create_direct_conversation(email, other_user)
+
+    if convo_id is None:
+        return {"message": "Failed to create group"}
+
+    return {
+        "message": "Direct conversation created",
+        "conversation_id": convo_id
+    }
+
+# 1/6
+# just have send and receive, don't have separate for group and direct (except for making convos in logic.py)
+# work on create_direct_conversation in main.py (for groyp too, (messages/send enpoint, messages/receive endpoint) pass convo id for these) 
+# and update logic.py (user_exists funct for receiver's email)
+# implement as many endpoints as u can 
 
 # Update:
 # Videos: 
@@ -166,7 +193,7 @@ async def receive_group_message(gc_id: int, request: Request):
 #   SQLAlchemy Core
 #   FastAPI & FastAPI Security
 #   Backend System Design Basics
-#   Design a Chat System System Design Interview
+#   Chat System System Design
 #   Distributed Systems
 # Understanding existing code: 
 # HW: finished get_messages_by_convo_id, save_messages

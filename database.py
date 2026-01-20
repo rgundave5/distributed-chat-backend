@@ -1,5 +1,5 @@
 # database.py
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, ForeignKey, UniqueConstraint
 from datetime import datetime
 # every backend app needs 1. connection to db, 2. description of what tables exist, 
 # 3. command to actually create or initialize those tables
@@ -34,44 +34,23 @@ messages = Table(
 conversations = Table(
     "conversations", metadata,
     Column("id", Integer, primary_key=True), # this is referenced in next table
-    Column("type", Integer, nullable=False), # direct or group
+    Column("type", Integer, nullable=False), # direct (1) or group (0)
     Column("name", String, nullable=True) # gc name (not needed for dm, bc name is js receiver)
 )
-
-# freecodecamp: sql basics (foreign key tutorial) WATCH
 
 # to verify what convos someone has access to
 # returns everyone who exists in a convo (ex: massive gc)
 convo_participants = Table(
     "convo_participants", metadata,
     Column("id", Integer, primary_key=True),
-    Column("user_email", ForeignKey("users.email"), String, nullable=False), # sql doesnt allow arrays cleanly, how to show gc particpants
+    Column("user_email", String, ForeignKey("users.email"), nullable=False),
+    Column("convo_id", Integer, ForeignKey("conversations.id"), nullable=False), # sql doesnt allow arrays cleanly, how to show gc particpants
     # use foreign key: way to use external table key, js refers to the id of another table (more direct connection)
     # refer to diagram for this table "id | user_email | convo_id"
     # in ten gc, my convo id will be diff for each gc
-    Column("convo_id", ForeignKey("conversations.id"), nullable=False)
     # unique constraint: constraint that forces two values to not be same, no two users in same convo
     UniqueConstraint("user_email", "convo_id", name="unique_user_convo")   
 )
-
-# dm id table and gc id table
-# store in messages (stores actual message) and dm id table when sending a dm
-#dm_id = Table(
-    #"dm_id", metadata,
-    #Column("id", Integer, primary_key=True),
-    #Column("message_id", Integer, nullable=False),
-    #Column("sender", String, nullable=False),
-    #Column("receiver", String, nullable=True)
-#)
-
-#gc_id = Table(
-    #"gc_id", metadata,
-    #Column("gc_id", Integer, primary_key=True),
-    #Column("message_id", Integer, nullable=False),
-    #Column("sender", String, nullable=False),
-    #Column("group_name", String, nullable=True)
-#)
-
 
 # tells SQLAlchemy to create the tables in the database 
 metadata.create_all(engine)

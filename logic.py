@@ -4,6 +4,9 @@ from sqlalchemy import insert, select, ForeignKey, and_
 from database import users, engine, conversations, convo_participants, messages
 from datetime import datetime
 
+# -----------------------------------------------------------------------------------
+# USERS
+# -----------------------------------------------------------------------------------
 # function to add a new user to the users table
 def add_user(email, password):
     try:
@@ -57,17 +60,21 @@ def authenticate_user(email, password):
         print("Error authenticating user:", e)
         return False
 
+def user_exists(email):
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                select(users.c.email).where(users.c.email == email)
+            ).fetchone()
 
+            return result is not None
+    except Exception as e:
+        print("Error checking if user exists:", e)
+        return False
 
-# -----------message receiving logic----------------------------------------------------
-# if it dne, it will create a dm 
-# check if convo exists first, if nto create it
-# 1. for any convo of type dircet, fetch all direct convo rows
-# 2. for every direct convo row, return any user emails where the convo id of that participants row = convestaions row we are iterating on
-# refer to ss
-# create or reuse direct convo
-# allows next messages to reuse same conversation
-##
+# -----------------------------------------------------------------------------------
+# CONVERSATIONS
+# -----------------------------------------------------------------------------------
 def get_or_create_direct_conversation(user1, user2):
     # could raise error 
     if (user1 == user2):
@@ -98,15 +105,15 @@ def get_or_create_direct_conversation(user1, user2):
             insert(conversations).values(type="direct")
         )
         conn.commit()
-        convo_id = convo_result.inserted_primary_key[0]
+        conversation_id = convo_result.inserted_primary_key[0]
 
         conn.execute(insert(convo_participants), [
-            {"user_email": user1, "conversation_id": convo_id},
-            {"user_email": user2, "conversation_id": convo_id},
+            {"user_email": user1, "conversation_id": conversation_id},
+            {"user_email": user2, "conversation_id": conversation_id},
         ])
         conn.commit()
 
-        return convo_id
+        return conversation_id
 
 
 # param is array of participants
@@ -121,24 +128,29 @@ def create_group_convo(gc_name, participants_array):
         with engine.connect() as conn:
             result = conn.execute(
                 # id param can be omitted handled already
-                insert("conversations").values(type="group", name=gc_name)
+                insert(conversations).values(type="group", name=gc_name)
             )
-            convo_id = result.inserted_primary_key # gives primary key of result (convo id)
+            conversation_id = result.inserted_primary_key[0] # gives primary key of result (convo id)
             # update particpants table with new partipants
             for index in participants_array:
                 result = conn.execute(
-                    insert(convo_participants).values(user_email=index, convo_id=convo_id)
+                    insert(convo_participants).values(user_email=index, conversation_id=conversation_id)
                 )
             conn.commit()
-            return convo_id
+            return conversation_id
     except Exception as e:
         print("Error receiving group message:", e)
         return None
+# why keep it separate: we canr create the same dm again, reuse the chat
+# u can create the same groupchat w the same ppl without resusing the old one (itll create a new one)
+# discord ex: diff chats w same ppl for different reasons (discuss diff topics for ex)
 
-#----------------------------------------------
+# -----------------------------------------------------------------------------------
+# MESSAGES
+# -----------------------------------------------------------------------------------
 # returns messages in convo up to the limit
 # OR returns messages after message_id 
-def get_message_by_convo_id(convo_id, limit=50, after_message_id):
+def get_message_by_convo_id(conversation_id, after_message_id=None, limit=50):
     # limit variable to avoid spamming
     # message_id var in case user wants 
     try:
@@ -146,11 +158,11 @@ def get_message_by_convo_id(convo_id, limit=50, after_message_id):
         with engine.connect() as conn:
             query = (
                 select(messages)
-                .where(messages.c.conversation_id == convo_id)
+                .where(messages.c.conversation_id == conversation_id)
             )
             # if clients wants message AFTER a certain message
             if after_message_id is not None:
-                query = query.where(message.c.id > after_message_if)
+                query = query.where(messages.c.id > after_message_id)
             # if it's none then just continue with ordering
             query = query.order_by(messages.c.date.asc())
 
@@ -169,7 +181,6 @@ def get_message_by_convo_id(convo_id, limit=50, after_message_id):
         print("Error retrieving message:", e)
         return None
 
-# -----------message saving logic----------------------------------------------------
 # must check if convo exists in the first place
 # sender auth, check if sender belongs to convo given by convo id
 def save_message(conversation_id, sender, message):
@@ -177,18 +188,18 @@ def save_message(conversation_id, sender, message):
         with engine.connect() as conn:
             # check if convo exists in db
             conv = conn.execute(
-                select(conversations.c.id).where(conversation.c.id == conversation_id)
+                select(conversations.c.id).where(conversations.c.id == conversation_id)
             ).fetchone()
 
             if not conv:
-                raise Execption("Conversation does not exist")
+                raise Exception("Conversation does not exist")
 
             # check membership (if sender belongs to convo)
             membership = conn.execute(
-                select(convo_participants.c.convo_id)
+                select(convo_participants.c.conversation_id)
                 .where(
                     # 2 checks: convo id exists and email matches sender's
-                    (conversations.c.convo_id == conversation_id) &
+                    (conversations.c.conversation_id == conversation_id) &
                     (conversations.c.user_email == sender)
                 )
             ).fetchone()
