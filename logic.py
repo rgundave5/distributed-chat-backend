@@ -222,3 +222,53 @@ def save_message(conversation_id, sender, message):
     except Exception as e:
         print("Error saving message:", e)
         return None
+
+
+def delete_conversation(convo_id, requester_email):
+    try:
+        with engine.connect() as conn:
+            # 1. Check convo exists
+            convo = conn.execute(
+                select(conversations.c.id)
+                .where(conversations.c.id == convo_id)
+            ).fetchone()
+
+            if not convo:
+                return False  #convo doesn't exist
+
+            # 2. Check tht the requester is a participant
+            membership = conn.execute(
+                select(convo_participants.c.id)
+                .where(
+                    (convo_participants.c.convo_id == convo_id) &
+                    (convo_participants.c.user_email == requester_email)
+                )
+            ).fetchone()
+
+            if not membership:
+                return False  #not authorized
+
+            # 3. Delete messages
+            conn.execute(
+                delete(messages)
+                .where(messages.c.conversation_id == convo_id)
+            )
+
+            # 4. Delete participants
+            conn.execute(
+                delete(convo_participants)
+                .where(convo_participants.c.convo_id == convo_id)
+            )
+
+            # 5. Delete conversation
+            conn.execute(
+                delete(conversations)
+                .where(conversations.c.id == convo_id)
+            )
+
+            conn.commit()
+            return True
+
+    except Exception as e:
+        print("Error deleting conversation:", e)
+        return False

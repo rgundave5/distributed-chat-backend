@@ -51,6 +51,7 @@ class Client:
         print(response.json())
         return response.json()
     
+    # implement direct convo, client testing to run all functions, send and recieve messages
    
     # ------------send messages------------
     def send_messages(self, conversation_id, text):

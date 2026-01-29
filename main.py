@@ -43,7 +43,6 @@ async def signup(request: Request):
     else:
         return {"message": "Error storing data"}
 
-# create /login endpoint (authentication)
 # login funct - when user logs in, send email, pword --> check if it exists in table --> return true
 @app.post("/login")
 # this line defines the path operation function
@@ -72,7 +71,7 @@ async def send_message(request: Request):
     email = data.get("sender")
     password = data.get("password")
     # not needed
-    #receiver = data.get("receiver")
+    # receiver = data.get("receiver")
     # update variables
     message_text = data.get("message")
     convo_id = data.get("conversation_id")
@@ -83,6 +82,9 @@ async def send_message(request: Request):
     # make funct to chcek if convo id is valid in logic.py
     # check if user exists in convo with funct in logic.py
     msg_id = save_message(convo_id, email, message_text)
+
+    if msg_id is None:
+        return {"message": "Not authorized or conversation invalid"}
 
     return {
         "message": "Sent",
@@ -177,6 +179,28 @@ async def create_direct_conversation(request: Request):
     return {
         "message": "Direct conversation created",
         "conversation_id": convo_id
+    }
+
+#---------------------------------------------------------------------------------
+# Conversation deletion/leaving
+#---------------------------------------------------------------------------------
+@app.delete("/conversations/{conversation_id}")
+async def delete_conversation_endpoint(conversation_id: int, request: Request):
+    data = await request.json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not authenticate_user(email, password):
+        return {"message": "Invalid credentials"}
+
+    success = delete_conversation(conversation_id, email)
+
+    if not success:
+        return {"message": "Conversation not found/access denied"}
+
+    return {
+        "message": "Conversation deleted",
+        "conversation_id": conversation_id
     }
 
 # 1/6
