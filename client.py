@@ -36,7 +36,22 @@ class Client:
         print(f"{self.name} login response:", login_response.json())
         return login_response.json()
 
-
+    # bad practice to have all these functs in client class, better way to do it:
+    
+    # -----------create convo-------------
+    def create_group_convo(self, participants_array):
+        url = f"http://{address}:{port}/conversations/group"
+        payload = {
+            "email": self.email,
+            "password": self.password,
+            "participants": participants_array,
+        }
+        print(payload)
+        response = requests.post(url, json=payload)
+        print(response.json())
+        return response.json()
+    
+   
     # ------------send messages------------
     def send_messages(self, conversation_id, text):
         url = f"http://{address}:{port}/messages/send"
@@ -95,9 +110,13 @@ if __name__=="__main__":
     client2.login()
     client3.login()
 
+    participants_array1 = ["johndoe15@gmail.com", "johndoe16@gmail.com", "george12@gmail.com"]
+    convo_id = client1.create_group_convo(participants_array1)
+    print(convo_id)
+
     # Send direct messages
-    client1.send_messages("johndoe15@gmail.com", "Hello John16!")
-    client3.send_messages("johndoe16@gmail.com", "Hi JohnD15!")
+    #client1.send_messages(convo_id, "Hello John16!")
+    #client3.send_messages(convo_id, "Hey!!")
 
     
     # test correct and incorrect login attempts

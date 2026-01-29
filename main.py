@@ -132,10 +132,12 @@ async def create_group_conversation(request: Request):
     email = data.get("email")
     password = data.get("password")
     participants = data.get("participants")
+    print(email, password)
 
     if not authenticate_user(email, password):
-        return {"message": "Invalid credentials"}
-
+        print("authenticate_user entered")
+        return {"message": "Invalid credentials, authentication error"}
+   
     if email not in participants:
         participants.append(email)
     
