@@ -157,6 +157,35 @@ async def create_group_conversation(request: Request):
         "conversation_id": convo_id
     }
 
+# another endpoint: loads convo given convo id!!
+
+# is user closes app and wants to see all convos theyre in again
+# input: user email, password for auth
+# output: list of all the convos they're in (list of convo ids)
+# brainstorm of endpoint structure:
+#   flow from user side to server and back to user
+#   client sends POST request to access all convos --> main.py --> logic.py --> db --> main.py --> client
+#   top down development/coding (preferred bc things are always changing --> indep project): brainstorm endpoint assuming db and logic.py are already made, start w high levelled, then low levelled 
+#   as opposed to down top dev: low levlled --> high levelled
+# idea generation: incubation, validated learning (talk to users, check market) --> keep validating the idea
+# ece 186
+@app.post("conversations")
+async def get_all_convos(request: Request):
+    data = await request.json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not authenticate_user(email, password):
+        return {"message": "Invalid credentials"}
+
+    conversations = list_user_conversations(email)
+
+    return {
+        "conversations": conversations
+    }
+    # call logic.py funct
+    # return all convo ids
+
 @app.post("/conversations/direct")
 async def create_direct_conversation(request: Request):
     data = await request.json()
@@ -202,6 +231,8 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
         "message": "Conversation deleted",
         "conversation_id": conversation_id
     }
+
+
 
 # 1/6
 # just have send and receive, don't have separate for group and direct (except for making convos in logic.py)

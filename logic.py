@@ -272,3 +272,81 @@ def delete_conversation(convo_id, requester_email):
     except Exception as e:
         print("Error deleting conversation:", e)
         return False
+
+# 1/29
+# incorporate: list all users in a specific convo
+# all convos listed under a user
+# table join: joins conversations table w convo participants table, to check which convo ids are under that user
+# takes the rows from two tabbles and shuffles them tg
+# based on a related column btwn them
+# cam be based on ForeignKey relationships too!
+# benefit: one query --> utilizes shared column to link both tables tg, able to see more info w given input
+# how it will work for this funct: two tables (convo and convo particips tables), join on convo id (shared column)
+# if the user email = convo particip's email
+# WHY? goal is to return type of convo and the name + convo id user is in, we need all that info --> need both tables
+def list_user_conversations (email, password):
+try:
+    with engine.connect() as conn:
+        convo = conn.execute(
+            # select where the convo ids match in both tables
+            select(convo_participants, conversations)
+            .join(convo_participants, conversations.c.id==
+            convo_participants.c.convo_id)
+            .where(email==convo_participants.c.user_email) # convo_particups is still main table, not interchangable
+        ).fetchall()    
+        
+        # temporary grouping structure
+        convos = {}
+
+        for row in rows:
+            convo_id = row.conversations.id
+            # if that id hasnt been seen before create the convo
+            if convo_id not in convos:
+                convos[convo_id] = {
+                    "conversation_id": convo_id,
+                    "type": row.conversations.type,
+                    "name": row.conversations.name,
+                    "participants": []
+                }
+
+            convos[convo_id]["participants"].append(
+                row.convo_participants.user_email
+            )
+
+        # convert dict into the final respons
+        results = []
+
+        for convo in convos.values():
+            if convo["type"] == "direct":
+                # find the other user
+                other_user = [
+                    # keep only email thats not me
+                    p for p in convo["participants"] if p != email
+                ][0]
+
+                results.append({
+                    "conversation_id": convo["conversation_id"],
+                    "type": "direct",
+                    "user": other_user
+                })
+            else:
+                results.append({
+                    "conversation_id": convo["conversation_id"],
+                    "type": "group",
+                    "name": convo["name"],
+                    "participants": convo["participants"]
+                })
+
+        return results
+
+except Exception as e:
+    print("Error retrieving all conversations:", e)
+    return False
+
+# hw 1/29: iterate thru all convo rows returned, get various info: id, type, name (bc joined w convo table)
+# members, --> do a check: if direct, then only one other particip that isnt our user, if group: 
+# participants table: return the participants that are in the selected fields, if 2 particips then we know 
+# its direct, if more then we know it's group
+# hw 1/29: finish the get all convos endpoint, run client and debug everything, do more testing in client.py
+# to see if all endpoints are working, 
+# send email to alex before next meeting! 
