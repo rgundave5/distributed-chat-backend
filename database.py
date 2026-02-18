@@ -44,7 +44,6 @@ convo_participants = Table(
     "convo_participants", metadata,
     Column("id", Integer, primary_key=True),
     Column("user_email", String, ForeignKey("users.email"), nullable=False),
-    
     # foreign key: id here is same as it is in conversations table
     Column("convo_id", Integer, ForeignKey("conversations.id"), nullable=False), # sql doesnt allow arrays cleanly, how to show gc particpants
     # use foreign key: way to use external table key, js refers to the id of another table (more direct connection)

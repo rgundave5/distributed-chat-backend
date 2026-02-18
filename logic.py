@@ -284,64 +284,117 @@ def delete_conversation(convo_id, requester_email):
 # how it will work for this funct: two tables (convo and convo particips tables), join on convo id (shared column)
 # if the user email = convo particip's email
 # WHY? goal is to return type of convo and the name + convo id user is in, we need all that info --> need both tables
-def list_user_conversations (email, password):
-try:
-    with engine.connect() as conn:
-        convo = conn.execute(
-            # select where the convo ids match in both tables
-            select(convo_participants, conversations)
-            .join(convo_participants, conversations.c.id==
-            convo_participants.c.convo_id)
-            .where(email==convo_participants.c.user_email) # convo_particups is still main table, not interchangable
-        ).fetchall()    
-        
-        # temporary grouping structure
-        convos = {}
-
-        for row in rows:
-            convo_id = row.conversations.id
-            # if that id hasnt been seen before create the convo
-            if convo_id not in convos:
-                convos[convo_id] = {
-                    "conversation_id": convo_id,
-                    "type": row.conversations.type,
-                    "name": row.conversations.name,
-                    "participants": []
-                }
-
-            convos[convo_id]["participants"].append(
-                row.convo_participants.user_email
+def list_user_conversations (email):
+    try:
+        with engine.connect() as conn:
+            # subquery:grab all convos that match the convo ids, from there do the subquery that returns all the 
+            # convo ids that this user is apart of
+            my_convo_ids = (
+                select(convo_participants.c.convo_id)
+                .where(convo_participants.c.user_email==email)
+                .subquery()
             )
+            rows = conn.execute(
+                # select where the convo ids match in both tables
+                # label keyword: in sqlalchemy there are ways to name cols, way to access name of column, label
+                # gives the result column aspecific name
+                # doing it seperately to have column labels
+                # we also want user email
+                select(
+                    conversations.c.id.label("id"), 
+                    conversations.c.type.label("type"), 
+                    conversations.c.name.label("name"), 
+                    convo_participants.c.user_email.label("user_email")
+                )
 
-        # convert dict into the final respons
-        results = []
+                # .select_from
+                # join the tables by where the IDs are the same
+                .select_from(conversations.join(
+                    convo_participants, 
+                    conversations.c.id==convo_participants.c.convo_id
+                    )
+                )
+            
+                # now we hv joined table
+                # where is condition we have to return it
+                # where statement for this query is little diff:
+                # .in --> is it in the result of this select
+                .where(
+                    conversations.c.id.in_(select(my_convo_ids.c.convo_id))
+                )
+                # join takes first table (in this case: convo particps)
+            ).fetchall()    
+            # NOW: query includes
 
-        for convo in convos.values():
-            if convo["type"] == "direct":
-                # find the other user
-                other_user = [
-                    # keep only email thats not me
-                    p for p in convo["participants"] if p != email
-                ][0]
+            # we can chain a query into anther query --> sub query (get all convo ids a user is a part of and at the
+            # same time get all the partipants in those chats)
+            # goal is to return convo info AND everyones email 
+            
 
-                results.append({
-                    "conversation_id": convo["conversation_id"],
-                    "type": "direct",
-                    "user": other_user
-                })
-            else:
-                results.append({
-                    "conversation_id": convo["conversation_id"],
-                    "type": "group",
-                    "name": convo["name"],
-                    "participants": convo["participants"]
-                })
+            # sql JOIN (watch a vid)
+            # temporary grouping structure
+            convos = {}
 
-        return results
+            # can only access db thru a query (whole point of sqlalchemy)
+            # db isnt accessible like that, u must specify the data u want, craft the query in that way
+            # CONVO is the variable that has the data, we cant just access any table we want without a query
+            # cse 180 - databases
+            for row in rows:
+                # sql alchemy syntax
+                convo_id = row._mapping["id"] 
+                # if that id hasnt been seen before create object for it and store it in the convos array we made
+                # allows convos array to be filled w all the conversation info
+                if convo_id not in convos:
+                    convos[convo_id] = {
+                        # cannor access db like this --> change
+                        "conversation_id": row._mapping["id"],
+                        "type": row._mapping["type"],
+                        "name": row._mapping["name"],
+                        "participants": []
+                    }
 
-except Exception as e:
-    print("Error retrieving all conversations:", e)
-    return False
+                # CHANGE 
+                convos[convo_id]["participants"].append(
+                    row.convo_participants.user_email
+                )
+
+            # convert dict into the final respons
+            results = []
+
+            for convo in convos.values():
+                if convo["type"] == "direct":
+                    # find the other user
+                    other_user = [
+                        # keep only email thats not me
+                        p for p in convo["participants"] if p != email
+                    ][0]
+
+                    results.append({
+                        "conversation_id": convo["conversation_id"],
+                        "type": "direct",
+                        "user": other_user
+                    })
+                else:
+                    results.append({
+                        "conversation_id": convo["conversation_id"],
+                        "type": "group",
+                        "name": convo["name"],
+                        "participants": convo["participants"]
+                    })
+
+            return results
+
+    except Exception as e:
+        print("Error retrieving all conversations:", e)
+        return False
+
+# 2/3:
+# get the get_all_convos working, endpoint working
+# write tests on client, that creates direct convo and group convo, 
+# call list_user_convos endpoint, send messages on both by convo id
+# debugging too!
+# watch SQLalchemy crash course, join (diff types of join in sql)
+
 
 # hw 1/29: iterate thru all convo rows returned, get various info: id, type, name (bc joined w convo table)
 # members, --> do a check: if direct, then only one other particip that isnt our user, if group: 

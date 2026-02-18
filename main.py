@@ -104,7 +104,7 @@ async def receive_messages(conversation_id: int, request: Request):
     ##
     # verify membership (2nd security check)
     with engine.connect() as conn:
-        membership = conn.execute(
+        membership = cute(
             select(convo_participants)
             .where(
                 (convo_participants.c.conversation_id == conversation_id) &
@@ -169,7 +169,7 @@ async def create_group_conversation(request: Request):
 #   as opposed to down top dev: low levlled --> high levelled
 # idea generation: incubation, validated learning (talk to users, check market) --> keep validating the idea
 # ece 186
-@app.post("conversations")
+@app.post("/conversations")
 async def get_all_convos(request: Request):
     data = await request.json()
     email = data.get("email")
