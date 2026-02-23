@@ -132,9 +132,9 @@ if __name__=="__main__":
     print("Running")
     # test signup
     # multiple clients
-    client1 = Client("JerrySeinfeld", "johndoe15@gmail.com", "junk123")
-    client2 = Client("JohnTravolta", "johndoe16@gmail.com", "junk123")
-    client3 = Client("GeorgeP", "george12@gmail.com", "pass")
+    client1 = Client("JerrySeinfeld1", "johndoe16@gmail.com", "junk123")
+    client2 = Client("JohnTravolta1", "johndoe17@gmail.com", "junk123")
+    client3 = Client("GeorgePr", "george13@gmail.com", "pass")
 
     # Signup users
     client1.signup()
