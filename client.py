@@ -1,5 +1,6 @@
 # client.py
 import requests
+import time
 
 address = "127.0.0.1"
 port = 8000
@@ -39,11 +40,12 @@ class Client:
     # bad practice to have all these functs in client class, better way to do it:
     
     # -----------create convo-------------
-    def create_group_convo(self, participants_array):
+    def create_group_convo(self, name, participants_array):
         url = f"http://{address}:{port}/conversations/group"
         payload = {
             "email": self.email,
             "password": self.password,
+            "name": name,
             "participants": participants_array,
         }
         print(payload)
@@ -78,24 +80,25 @@ class Client:
         return response.json()
 
     #----------create direct conversation--------
-    def create_direct(user1, password, user2):
+    def create_direct(self, other_user):
         response = requests.post(
-            f"http://{address}:{port}/conversations/create_direct",
+            f"http://{address}:{port}/conversations/direct",
             json={
-                "email": user1,
-                "password": password,
-                "other_user": user2
+                "email": self.email,
+                "password": self.password,
+                "other_user": other_user
             }
         )
         print("Direct Convo Created:", response.json())
+        return response.json()
 
     #----------create group conversation-------- 
-    def create_group(creator, password, name, participants):
+    def create_group(self, name, participants):
         response = requests.post(
-            f"http://{address}:{port}/conversations/create_group",
+            f"http://{address}:{port}/conversations/group",
             json={
-                "email": creator,
-                "password": password,
+                "email": self.email,
+                "password": self.password,
                 "name": name,
                 "participants": participants
             }
@@ -103,12 +106,12 @@ class Client:
         print("Group Convo Created:", response.json())
 
     #----------get all conversations-------- 
-    def get_all_conversations(email, password):
+    def get_all_conversations(self):
         response = requests.post(
             f"http://{address}:{port}/conversations",
             json={
-                "email": email,
-                "password": password
+                "email": self.email,
+                "password": self.password
             }
         )
         print("All Conversations:", response.json())
@@ -132,9 +135,10 @@ if __name__=="__main__":
     print("Running")
     # test signup
     # multiple clients
-    client1 = Client("JerrySeinfeld1", "johndoe16@gmail.com", "junk123")
-    client2 = Client("JohnTravolta1", "johndoe17@gmail.com", "junk123")
-    client3 = Client("GeorgePr", "george13@gmail.com", "pass")
+    suffix = str(int(time.time()))
+    client1 = Client("Jerry",  f"jerry{suffix}@gmail.com",  "pass1")
+    client2 = Client("George", f"george{suffix}@gmail.com", "pass2")
+    client3 = Client("Elaine", f"elaine{suffix}@gmail.com", "pass3")    
 
     # Signup users
     client1.signup()
@@ -146,38 +150,34 @@ if __name__=="__main__":
     client2.login()
     client3.login()
 
-    # direct convo
-    direct_convo_id = client1.create_direct_convo("johndoe16@gmail.com")
-    print("Direct convo id:", direct_convo_id)
+    # direct convo between client1 and client2
+    direct_resp = client1.create_direct(client2.email)
+    direct_id = direct_resp.get("conversation_id")
 
-    participants_array1 = ["johndoe15@gmail.com", "johndoe16@gmail.com", "george12@gmail.com"]
-    group_convo_id = client1.create_group_convo(
-        "Friend group 1",
-        participants
+    # group convo with all 3 clients
+    group_resp = client1.create_group_convo(
+        "Test Group",
+        [client1.email, client2.email, client3.email]
     )
-    print("Group convo id:", group_convo_id)
-    client1.send_group(group_convo_id, "Hello everyone!")
-    client2.send_group(group_convo_id, "Hi Jerry!")
-    client3.send_group(group_convo_id, "Whats up!")
+    group_id = group_resp.get("conversation_id")
 
-    # recieve 
-    client1.get_messages(group_convo_id)
-
-    # list convos of all
+    # conversations for each user
     client1.get_all_conversations()
     client2.get_all_conversations()
     client3.get_all_conversations()
+
+    # send messages on both convos
+    client1.send_messages(direct_id, "Hey George, it's you and I talking in this chat!")
+    client2.send_messages(direct_id, "Hey Jerry!")
+
+    client1.send_messages(group_id, "Hello everyone!")
+    client2.send_messages(group_id, "Hi Jerry!")
+    client3.send_messages(group_id, "What's up guys!")
     
-    #convo_id = client1.create_group_convo(participants_array1)
-    #print(convo_id)
+    # get messages
+    client1.get_messages(direct_id)
+    client1.get_messages(group_id)
 
-
-
-    # Send direct messages
-    #client1.send_messages(convo_id, "Hello John16!")
-    #client3.send_messages(convo_id, "Hey!!")
-
-    
     # test correct and incorrect login attempts
     #if client1_signup_response.get("message") == "Data stored successfully":
         #client1.login()  # correct

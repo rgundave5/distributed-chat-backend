@@ -7,6 +7,7 @@ from logic import (
     save_message,
     get_message_by_convo_id,
     create_group_convo,
+    list_user_conversations,
     get_or_create_direct_conversation,
     user_exists
 )
@@ -24,7 +25,6 @@ async def root():
 
 
 # API ENDPOINTS ------------------------------------------------------------------------------
-
 # API endpoints (the path client takes essentially, like a doorway to the server) --> 
 # their HTTP methods or operations (like POST, GET, PUT, DELETE) - used for a specific action
 # examples:
@@ -92,7 +92,6 @@ async def send_message(request: Request):
         "message_id": msg_id
     }
 
-# swap message id w receiver or gc --> do this in url, or request's body
 @app.post("/messages/receive/{conversation_id}")
 async def receive_messages(conversation_id: int, request: Request):
     data = await request.json()
@@ -101,29 +100,9 @@ async def receive_messages(conversation_id: int, request: Request):
 
     if not authenticate_user(email, password):
         return {"message": "Invalid credentials"}
-    ##
-    # verify membership (2nd security check)
-    with engine.connect() as conn:
-        membership = cute(
-            select(convo_participants)
-            .where(
-                (convo_participants.c.conversation_id == conversation_id) &
-                (convo_participants.c.user_email == email)
-            )
-        ).fetchone()
 
-        if not membership:
-            return {"error": "Access denied"}
-
-        msgs = conn.execute(
-            select(messages)
-            .where(messages.c.conversation_id == conversation_id)
-            .order_by(messages.c.date)
-        )
-
-        return {
-            "messages": [dict(row._mapping) for row in msgs]
-        }
+    msgs = get_message_by_convo_id(conversation_id)
+    return {"messages": msgs}
 
 # -----------------------------------------------------------
 # Conversation creation
@@ -147,7 +126,7 @@ async def create_group_conversation(request: Request):
         if user_exists(key) is False: 
             return {"message": "Invalid credentials, participants are invalid"}
 
-    convo_id = create_group_convo(gc_name, participants_array)
+    convo_id = create_group_convo(data.get("name"), participants)
 
     if convo_id is None:
         return {"message": "Failed to create group"}
@@ -316,7 +295,7 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
     # messages/group/receive
     # messages/direct/receive{message_id}
 
-# to start server run:  uvicorn main:app --reload 
+# to start server run:  2 
 # FastAPI listens at http://127.0.0.1:8000
 # send a request using curl command
 # FastAPI receives it, runs endpoint, sends JSON back

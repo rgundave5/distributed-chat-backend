@@ -34,7 +34,7 @@ messages = Table(
 conversations = Table(
     "conversations", metadata,
     Column("id", Integer, primary_key=True), # this is referenced in next table
-    Column("type", Integer, nullable=False), # direct (1) or group (0)
+    Column("type", String, nullable=False), # "direct" or "group" 
     Column("name", String, nullable=True) # gc name (not needed for dm, bc name is js receiver)
 )
 

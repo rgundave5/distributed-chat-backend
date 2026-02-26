@@ -1,6 +1,6 @@
 # logic.py
 # middleman layer
-from sqlalchemy import insert, select, ForeignKey, and_
+from sqlalchemy import insert, select, delete, ForeignKey, func, and_
 from database import users, engine, conversations, convo_participants, messages
 from datetime import datetime
 
@@ -87,13 +87,13 @@ def get_or_create_direct_conversation(user1, user2):
             .select_from(
                 conversations.join(
                     convo_participants,
-                    conversations.c.id == convo_participants.c.conversation_id
+                    conversations.c.id == convo_participants.c.convo_id
                 )
             )
             .where(conversations.c.type == "direct")
             .where(convo_participants.c.user_email.in_([user1, user2]))
             .group_by(conversations.c.id)
-            .having(conversations.c.id.count() == 2)
+            .having(func.count(convo_participants.c.user_email) == 2)
         )
 
         result = conn.execute(query).fetchone()
@@ -108,8 +108,8 @@ def get_or_create_direct_conversation(user1, user2):
         conversation_id = convo_result.inserted_primary_key[0]
 
         conn.execute(insert(convo_participants), [
-            {"user_email": user1, "conversation_id": conversation_id},
-            {"user_email": user2, "conversation_id": conversation_id},
+            {"user_email": user1, "convo_id": conversation_id},
+            {"user_email": user2, "convo_id": conversation_id},
         ])
         conn.commit()
 
@@ -134,7 +134,7 @@ def create_group_convo(gc_name, participants_array):
             # update particpants table with new partipants
             for index in participants_array:
                 result = conn.execute(
-                    insert(convo_participants).values(user_email=index, conversation_id=conversation_id)
+                    insert(convo_participants).values(user_email=index, convo_id=conversation_id)
                 )
             conn.commit()
             return conversation_id
@@ -175,7 +175,7 @@ def get_message_by_convo_id(conversation_id, after_message_id=None, limit=50):
             # row._mapping is a mapping-like object
             # this line converts the row mapping object to a python dict
             # python dict --> fast api --> JSON response
-            return [dict(result._mapping) for row in result]
+            return [dict(row._mapping) for row in result]
 
     except Exception as e:
         print("Error retrieving message:", e)
@@ -196,16 +196,15 @@ def save_message(conversation_id, sender, message):
 
             # check membership (if sender belongs to convo)
             membership = conn.execute(
-                select(convo_participants.c.conversation_id)
+            select(convo_participants.c.convo_id)
                 .where(
-                    # 2 checks: convo id exists and email matches sender's
-                    (conversations.c.conversation_id == conversation_id) &
-                    (conversations.c.user_email == sender)
+                    (convo_participants.c.convo_id == conversation_id) &
+                    (convo_participants.c.user_email == sender)
                 )
             ).fetchone()
 
             if not membership:
-                raise Execption("Sender not authorized")
+                raise Exception("Sender not authorized")
 
             result = conn.execute(
                 insert(messages).values(
@@ -320,7 +319,7 @@ def list_user_conversations (email):
                 # where statement for this query is little diff:
                 # .in --> is it in the result of this select
                 .where(
-                    conversations.c.id.in_(select(my_convo_ids.c.convo_id))
+                    conversations.c.id.in_(my_convo_ids)
                 )
                 # join takes first table (in this case: convo particps)
             ).fetchall()    
@@ -354,11 +353,9 @@ def list_user_conversations (email):
                     }
 
                 # CHANGE 
-                convos[convo_id]["participants"].append(
-                    row.convo_participants.user_email
-                )
+                convos[convo_id]["participants"].append(row._mapping["user_email"])
 
-            # convert dict into the final respons
+            # convert dict into the final response
             results = []
 
             for convo in convos.values():
