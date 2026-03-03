@@ -1,0 +1,97 @@
+<!-- HTML structure
+- 4 main components: 
+account (signup, login), convos (create, get convo ur in), messaging sending/loading messages, debug log
+(describes the actions for us to debug)
+
+- implement on ur own,
+- hierarchy:
+
+page 1 (landing page) - index.html
+- login/signup 
+    - email
+    - pword
+
+page 2 (messages) - messaging.html
+- imessages style (on laptop)
+- list of all convos on left side
+- when a convo is clicked the messages appear next to the list
+- messages separated (user's messages on right side, others on left)
+-------------------------------------------
+       |  (PFP) Robert
+       |------------------------------------
+  PFP  |
+  PFP  |    Hi I'm Rob
+  PFP  |
+  PFP  |                    I'm Roshni
+  PFP  |
+  PFP  |
+  PFP  |   Hey how are u 
+       |
+       |                    I'm good thanks
+-------------------------------------------
+
+ -->
+
+<!DOCTYPE html>
+ <html lang="en">
+ <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+     <title>Messages</title>
+     <link rel="stylesheet" href="style.css" />
+ </head>
+ <body>
+    <!-- ========================================
+         PAGE 1: AUTH SCREEN
+         (Hidden after login/signup)
+    ============================================= -->
+    <div id="auth-screen">
+
+        <input type="email"    id="auth-email"    placeholder="Email" />
+        <input type="password" id="auth-password" placeholder="Password" />
+
+        <button id="auth-submit-btn">Log In</button>
+
+        <!-- clicking this toggles btwn Login and Signup mode -->
+        <p>Don't have an account? <span id="auth-toggle-btn">Sign up</span></p>
+
+        <!-- error message shown here if login fails -->
+        <p id="auth-error">Login failure. Please try again.</p>
+
+    </div>
+
+
+    <!-- =============================================
+         PAGE 2: MAIN  SCREEN
+         (Shown after login)
+    ============================================= -->
+    <div id="app-screen" class="hidden">
+
+        <!-- -----------------------------------------
+             SIDEBAR (left column)
+             Shows list of all conversations
+        ----------------------------------------- -->
+        <div id="sidebar">
+
+            <!-- top of sidebar: title + new chat button -->
+            <div id="sidebar-header">
+                <h2>Messages</h2>
+                <button id="new-chat-btn">+</button>
+            </div>
+
+            <!-- list of conversations, populated by JS -->
+            <ul id="convo-list">
+                <!-- JS will insert items here. Each item looks like:
+                <li class="convo-item" data-convo-id="1" data-type="direct">
+                    George
+                </li>
+                -->
+            </ul>
+
+            <!-- bottom of sidebar: who's logged in + logout -->
+            <div id="sidebar-footer">
+                <span id="current-user-label"></span>
+                <button id="logout-btn">Log Out</button>
+            </div>
+
+        </div>

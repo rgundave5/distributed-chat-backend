@@ -1,5 +1,14 @@
 # main.py
 # START FastAPI SERVER (from FastAPI's first steps)
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 from fastapi import FastAPI, Request
 from logic import (
     add_user,
@@ -211,7 +220,16 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
         "conversation_id": conversation_id
     }
 
-
+# 2/26
+# CL interface, two termiinals to send messages 
+    # 2 ways to go ab it: python based (easier), or website (web app that connects to server w login) --> css
+# next step? interface to work w it, then maybe deploy it (kubernetes pod)
+# django? 
+# html, css, javascript
+# could go back and use react, "angular,vue" ==> various frameworks
+# intro:
+# start w html, js, css
+# discord style chatting 
 
 # 1/6
 # just have send and receive, don't have separate for group and direct (except for making convos in logic.py)
