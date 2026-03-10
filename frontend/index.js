@@ -83,19 +83,21 @@ async function send(path, body) {
 // async keyword: dont wait for this funct to finish, blocking and nonblocking execution, with async u can call funct and doenst wait for the result, u can do wtv u want, and get the value/result later
 async function login(){
     const LOGIN_URL = `${BASEAPI}/login` // use tics not apostrophe
-    let email = ge("auth-email").value
+    let email = ge("auth-email").value //explained thru command shift i  (STEP 1)
     let pword = ge("auth-password").value
 
-    if (!authentication(email, pword)) return
-    const data = await send("/login", { email: email, password: pword })
+    if (!authentication(email, pword)) return // STEP 2 (check if the inputs are even inputted)
+    const data = await send("/login", { email: email, password: pword }) // STEP 3
 
     if (data.message === "Logged in successfully") {
-        ge("auth-screen").classList.add("hidden")
-        ge("app-screen").classList.remove("hidden")
+        openMessenger() // STEP 4 (page will change)
         // classList is the list of CSS classes on an element.
         //.add("hidden") hides the login page. 
         //.remove("hidden") reveals the app page.
-    } else {
+        // in css, u can style conrtent w ids or classname, built in class name is "hidden" -> changes visibility
+        // therefore: auth-screen is hidden and app screen is not hidden (.remove)
+        // ""
+    } else { // OR STEP 4
         ge("auth-error").textContent = "Invalid email or password."
     }
     // .value: html is hierarchial, mainelement.property/.method, dot syntax used a lot
@@ -120,13 +122,23 @@ async function signup() {
     const data = await send("/signup", { email: email, password: pword })
 
     if (data.message === "Data stored successfully") {
-        ge("auth-screen").classList.add("hidden")
-        ge("app-screen").classList.remove("hidden")
+        openMessenger()
     } else {
         ge("auth-error").textContent = "Signup failed. Email may already be taken."
     }
 }
 
+// -----------------------------------------------------------------------------
+// Open Messenger: sets property of page
+// -----------------------------------------------------------------------------
+function openMessenger() {
+    window.location.href = "messaging.html"
+    // connects this to messaging page
+    // iinstead of doing hidden and remove, use this function instead
+}
+
 // EVENT LISTENERS 
 ge("auth-login-btn").addEventListener("click", login)
 ge("auth-signup-btn").addEventListener("click", signup)
+
+// flow explanation
