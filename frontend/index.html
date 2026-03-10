@@ -46,17 +46,21 @@ page 2 (messages) - messaging.html
          (Hidden after login/signup)
     ============================================= -->
     <div id="auth-screen">
-
         <input type="email"    id="auth-email"    placeholder="Email" />
         <input type="password" id="auth-password" placeholder="Password" />
 
-        <button id="auth-submit-btn">Log In</button>
-
+        <button id="auth-login-btn">Log In</button>
+        <button id="auth-signup-btn">Sign Up</button>
         <!-- clicking this toggles btwn Login and Signup mode -->
-        <p>Don't have an account? <span id="auth-toggle-btn">Sign up</span></p>
+        
+        <!-- added! 
+         empty paragraph, starts blank, JS puts error messages into it
+        -->
+        <p id="auth-error"></p>
+        
 
-        <!-- error message shown here if login fails -->
-        <p id="auth-error">Login failure. Please try again.</p>
+        <!-- fix! -->
+        <p>Don't have an account? <span id="auth-toggle-btn">Sign up</span></p>
 
     </div>
 
@@ -95,3 +99,16 @@ page 2 (messages) - messaging.html
             </div>
 
         </div>
+    </div>
+
+    <script src="index.js"></script>
+        <!-- connects the two files -->
+</body>
+
+
+<!-- HW 3/2: do signup and finish login, do verification too that u can access values, 
+ write funct that can do api call using fetchapi (try)
+html and js (mozilla: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch) crash courses, 
+  -->
+
+

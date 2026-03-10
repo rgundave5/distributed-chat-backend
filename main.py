@@ -1,7 +1,11 @@
 # main.py
 # START FastAPI SERVER (from FastAPI's first steps)
-from fastapi.middleware.cors import CORSMiddleware
 
+# CORS? security thing
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
+
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -9,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from fastapi import FastAPI, Request
 from logic import (
     add_user,
     authenticate_user,
