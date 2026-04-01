@@ -1,0 +1,144 @@
+/* ===========================================================
+    RESET
+=========================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    height: 100vh;
+    font-family: cambria;
+}
+
+/* ===========================================================
+    APP SCREEN: sidebar (left) + chat area (right)
+=========================================================== */
+#app-screen {
+    display: flex;
+    height: 100vh; /* full screen height */
+}
+
+/* ===========================================================
+   SIDEBAR (left column)
+============================================================ */
+#sidebar {
+    width: 300px;            
+    display: flex;
+    flex-direction: column;   
+    border-right: 1px solid #ccc;
+}
+ 
+#sidebar-header {
+    display: flex;           
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+#convo-list {
+    flex: 1;                 
+    overflow-y: auto;        /* scroll*/
+    list-style: none;
+    padding: 0;
+}
+
+.convo-item {
+    padding: 12px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+ 
+.convo-item:hover {
+    background-color: #f0f0f0;
+}
+ 
+.convo-item.active {
+    background-color: #d0e8ff;
+}
+ 
+#sidebar-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+}
+
+/* =============================================
+   CHAT AREA (right column)
+============================================= */
+#chat-area {
+    flex: 1;                  
+    display: flex;
+    flex-direction: column;   
+}
+
+#no-convo-selected {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+}
+
+#chat-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+ 
+#chat-header {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+#messages-feed {
+    flex: 1;                  
+    overflow-y: auto;         
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+ 
+.message {
+    max-width: 60%;
+    padding: 8px 12px;
+    border-radius: 12px;
+}
+
+.message.sent {
+    align-self: flex-end;        
+    background-color: #007AFF;
+    color: white;
+}
+ 
+.message.received {
+    align-self: flex-start;       
+    background-color: #e9e9eb;
+    color: black;
+}
+ 
+#message-input-area {
+    display: flex;          
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    gap: 8px;
+}
+ 
+#message-input {
+    flex: 1;                 
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+/* =============================================
+   HIDDEN CLASS
+============================================= */
+.hidden {
+    display: none !important;
+}

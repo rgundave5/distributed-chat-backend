@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+ <html lang="en">
+ <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+     <title>Messages</title>
+     <link rel="stylesheet" href="style.css" />
+ </head>
+ <body>
+<!-- =============================================
+         PAGE 2: MAIN  SCREEN
+         (Shown after login)
+    ============================================= -->
+    <div id="app-screen">
+        <!-- -----------------------------------------
+             SIDEBAR (left column)
+             Shows list of all conversations
+        ----------------------------------------- -->
+        <div id="sidebar">
+
+            <!-- top of sidebar: title + new chat button -->
+            <div id="sidebar-header">
+                <h2>Messages</h2>
+                <button id="new-direct-btn">+ Direct Chat</button>
+                <button id="new-group-btn">+ Group Chat</button>
+            </div>
+
+            <!-- list of conversations, populated by JS -->
+            <ul id="convo-list">
+                <!-- JS will insert items here. Each item looks like:
+                <li class="convo-item" data-convo-id="1" data-type="direct">
+                    George
+                </li>
+                -->
+            </ul>
+
+            <!-- bottom of sidebar: who's logged in + logout -->
+            <div id="sidebar-footer">
+                <span id="current-user-label"></span>
+                <button id="logout-btn">Log Out</button>
+            </div>
+
+        </div>
+
+        <!-- -----------------------------------------
+             CHAT AREA (right column)
+             Actual chatting happens here, one convo selected
+        ----------------------------------------- -->
+        <div id="chat-area">
+            <!-- when no convo is selected -->
+             <div id="no-convo-selected">
+                <p>Select a conversation to start chatting.</p>
+             </div>
+
+            <!-- when a convo is selected -->
+            <div id="chat-view" class="hidden">
+                <!-- who you're talking to -->
+                <div id="chat-header">
+                    <h2 id="chat-title"></h2>
+                </div>
+
+                <!-- messages -->
+                <div id="messages-feed"></div>
+
+                <!-- typing + sending messages-->
+                <div id="message-input-area">
+                    <input type="text" id="message-input" placeholder="Message" />
+                    <button id="send-button">Send</button>
+                    <button id="refresh-button">Refresh</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="messaging.js"></script>
+</body>
+
+

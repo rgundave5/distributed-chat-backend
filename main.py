@@ -5,7 +5,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
 
-app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,9 +22,6 @@ from logic import (
     get_or_create_direct_conversation,
     user_exists
 )
-
-# create a FastAPI "instance"
-app = FastAPI()
 
 # An async function is a special function that handles long-running tasks 
 # (like network requests or file reading) without freezing your application

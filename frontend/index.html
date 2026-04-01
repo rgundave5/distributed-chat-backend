@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!-- HTML structure
 - 4 main components: 
 account (signup, login), convos (create, get convo ur in), messaging sending/loading messages, debug log
@@ -63,46 +64,7 @@ page 2 (messages) - messaging.html
         <p>Don't have an account? <span id="auth-toggle-btn">Sign up</span></p>
 
     </div>
-
-
-    <!-- =============================================
-         PAGE 2: MAIN  SCREEN
-         (Shown after login)
-    ============================================= -->
-    <div id="app-screen" class="hidden">
-
-        <!-- -----------------------------------------
-             SIDEBAR (left column)
-             Shows list of all conversations
-        ----------------------------------------- -->
-        <div id="sidebar">
-
-            <!-- top of sidebar: title + new chat button -->
-            <div id="sidebar-header">
-                <h2>Messages</h2>
-                <button id="new-chat-btn">+</button>
-            </div>
-
-            <!-- list of conversations, populated by JS -->
-            <ul id="convo-list">
-                <!-- JS will insert items here. Each item looks like:
-                <li class="convo-item" data-convo-id="1" data-type="direct">
-                    George
-                </li>
-                -->
-            </ul>
-
-            <!-- bottom of sidebar: who's logged in + logout -->
-            <div id="sidebar-footer">
-                <span id="current-user-label"></span>
-                <button id="logout-btn">Log Out</button>
-            </div>
-
-        </div>
-    </div>
-
     <script src="index.js"></script>
-        <!-- connects the two files -->
 </body>
 
 
@@ -114,7 +76,7 @@ html and js (mozilla: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 <!-- create a new html page for chatting, keep index.html for auth and signup(Why? js more organized)
  3/10 HW: refactor messaging.html to hv chat feautures - display chats, loading a message
 
- - take app screen for html, and move it over to messaging.html
+ - take app screen for html, and move it over to messaging.html (done)
  - set up messaging.html as main page for messaging (main interface) and add to it
  - work on messaging.html functs
   

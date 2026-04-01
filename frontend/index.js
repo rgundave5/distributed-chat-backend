@@ -1,4 +1,4 @@
-
+// index.js
 // implement the endpoints from client.py here
 // ex: signup, direct convos, group convos
 // event listener: html has things w event listening, like a button --> it listens, so when clicked it does an action
@@ -63,7 +63,7 @@ function authentication(email, pword) {
 }
 
 // ----------------------------------------------------------------------------
-// send funct: can be reused
+// SEND: can be reused
 // ----------------------------------------------------------------------------
 async function send(path, body) {
     const response = await fetch(`${BASEAPI}${path}`, {
@@ -78,7 +78,7 @@ async function send(path, body) {
 
 
 // -----------------------------------------------------------------------------
-// login
+// LOGIN
 // -----------------------------------------------------------------------------
 // async keyword: dont wait for this funct to finish, blocking and nonblocking execution, with async u can call funct and doenst wait for the result, u can do wtv u want, and get the value/result later
 async function login(){
@@ -90,7 +90,7 @@ async function login(){
     const data = await send("/login", { email: email, password: pword }) // STEP 3
 
     if (data.message === "Logged in successfully") {
-        openMessenger() // STEP 4 (page will change)
+        openMessenger(email, password) // STEP 4 (page will change)
         // classList is the list of CSS classes on an element.
         //.add("hidden") hides the login page. 
         //.remove("hidden") reveals the app page.
@@ -111,7 +111,7 @@ async function login(){
 }
 
 // -----------------------------------------------------------------------------
-// signup
+// SIGNUP
 // -----------------------------------------------------------------------------
 async function signup() {
     let email = ge("auth-email").value
@@ -122,7 +122,7 @@ async function signup() {
     const data = await send("/signup", { email: email, password: pword })
 
     if (data.message === "Data stored successfully") {
-        openMessenger()
+        openMessenger(email, password)
     } else {
         ge("auth-error").textContent = "Signup failed. Email may already be taken."
     }
@@ -132,6 +132,8 @@ async function signup() {
 // Open Messenger: sets property of page
 // -----------------------------------------------------------------------------
 function openMessenger() {
+    localStorage.setItem("email", email)
+    localStorage.setItem("password", pword)
     window.location.href = "messaging.html"
     // connects this to messaging page
     // iinstead of doing hidden and remove, use this function instead
