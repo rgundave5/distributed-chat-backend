@@ -90,7 +90,7 @@ async function login(){
     const data = await send("/login", { email: email, password: pword }) // STEP 3
 
     if (data.message === "Logged in successfully") {
-        openMessenger(email, password) // STEP 4 (page will change)
+        openMessenger(email, pword) // STEP 4 (page will change)
         // classList is the list of CSS classes on an element.
         //.add("hidden") hides the login page. 
         //.remove("hidden") reveals the app page.
@@ -122,7 +122,7 @@ async function signup() {
     const data = await send("/signup", { email: email, password: pword })
 
     if (data.message === "Data stored successfully") {
-        openMessenger(email, password)
+        openMessenger(email, pword)
     } else {
         ge("auth-error").textContent = "Signup failed. Email may already be taken."
     }
@@ -131,7 +131,7 @@ async function signup() {
 // -----------------------------------------------------------------------------
 // Open Messenger: sets property of page
 // -----------------------------------------------------------------------------
-function openMessenger() {
+function openMessenger(email, pword) {
     localStorage.setItem("email", email)
     localStorage.setItem("password", pword)
     window.location.href = "messaging.html"

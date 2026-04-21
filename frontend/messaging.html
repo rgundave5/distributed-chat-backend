@@ -34,6 +34,19 @@
                 -->
             </ul>
 
+            <!-- direct chat input - hidden until button clicked -->
+            <div id="direct-chat-input" class="hidden">
+                <input type="email" id="direct-email-input" placeholder="Their email" />
+                <button id="direct-submit-btn">Start Chat</button>
+            </div>
+
+            <!-- group chat input - hidden until button clicked -->
+            <div id="group-chat-input" class="hidden">
+                <input type="text" id="group-name-input" placeholder="Group name" />
+                <textarea id="group-emails-input" placeholder="Emails, one per line"></textarea>
+                <button id="group-submit-btn">Create Group</button>
+            </div>
+            
             <!-- bottom of sidebar: who's logged in + logout -->
             <div id="sidebar-footer">
                 <span id="current-user-label"></span>

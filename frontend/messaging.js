@@ -38,6 +38,7 @@ function getSession() {
     }
 }
 const session = getSession()
+ge("current-user-label").textContent = session.email
 
 // ========================================================
 // LOAD CONVO
@@ -64,6 +65,8 @@ async function loadConversations(){
         // store convo id on the element
         li.dataset.convoId = convo.conversation_id
         li.addEventListener("click", () => {
+            document.querySelectorAll(".convo-item").forEach(i => i.classList.remove("active"))
+            li.classList.add("active")
             openConversation(convo.conversation_id, li.textContent)
         })
         convoList.appendChild(li)
@@ -151,6 +154,57 @@ async function sendMessage() {
 }
 
 // ========================================================
+// CREATE DIRECT
+// ========================================================
+async function createDirect() {
+    const otherUser = ge("direct-email-input").value.trim()
+    if (!otherUser) return
+
+    const data = await send("/conversations/direct", {
+        email: session.email,
+        password: session.password,
+        other_user: otherUser
+    })
+
+    console.log("create direct response:", data)
+
+    if (data.conversation_id) {
+        ge("direct-chat-input").classList.add("hidden")  // hide input
+        ge("direct-email-input").value = ""              // clear input
+        loadConversations()                              // refresh sidebar
+    }
+}
+
+// ========================================================
+// CREATE GROUP
+// ========================================================
+async function createGroup() {
+    const name = ge("group-name-input").value.trim()
+    const emailsRaw = ge("group-emails-input").value.trim()
+
+    if (!name || !emailsRaw) return
+
+    // split the textarea by new lines into an array
+    const participants = emailsRaw.split("\n").map(e => e.trim()).filter(e => e)
+
+    const data = await send("/conversations/group", {
+        email: session.email,
+        password: session.password,
+        name: name,
+        participants: participants
+    })
+
+    console.log("create group response:", data)
+
+    if (data.conversation_id) {
+        ge("group-chat-input").classList.add("hidden")  // hide input
+        ge("group-name-input").value = ""               // clear inputs
+        ge("group-emails-input").value = ""
+        loadConversations()                             // refresh sidebar
+    }
+}
+
+// ========================================================
 // EVENT LISTENERS
 // ========================================================
 ge("send-button").addEventListener("click", sendMessage)
@@ -158,6 +212,24 @@ ge("refresh-button").addEventListener("click", () => {
     const convoId = ge("send-button").dataset.convoId
     const title = ge("chat-title").textContent
     if (convoId) openConversation(convoId, title)
+})
+// show input when + Direct Chat clicked
+ge("new-direct-btn").addEventListener("click", () => {
+    ge("direct-chat-input").classList.toggle("hidden")
+})
+ge("direct-submit-btn").addEventListener("click", createDirect)
+
+ge("new-group-btn").addEventListener("click", () => {
+    ge("group-chat-input").classList.toggle("hidden")
+})
+ge("group-submit-btn").addEventListener("click", createGroup)
+
+ge("logout-btn").addEventListener("click", () => {
+    localStorage.clear()
+    window.location.href = "index.html"
+})
+ge("message-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendMessage()
 })
 
 // load conversations when page opens
