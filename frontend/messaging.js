@@ -73,13 +73,37 @@ async function loadConversations(){
     })
 }
 
+// redundant! no need reloading ALL messages every time, fteching ALL messages when chat is long is hard
+// and impractical
+// 4/22: (do this) fix this, incremental fetching, track last message id that was sent there 
+// every time new message added, check after a certain to only return the "new" messages, not the whole convo
+// - real time updates, no need to refrech just automatically reloads messages
+// - (do this) polling (async event, runs funct every sec): sends a query, code is repeatedly checking for new data, 
+//       will poll when a chat is open, every new message is added to local list, pull every 1 second  
+//          for new messages after a certain message id  (to know which emssages are already pulled, bc we only 
+//          need the messages AFTER that)
+//      ex: ordered pizza, call restaurant asking if pizza is ready (same concept)
+// (not needed but for the future, good fix to make --> server tells u new message)
+// pollling for all? web sockets, 
+// (do this) add time stamps to each message
+// (do this) more message data for groupchats, who sent it and when
+// typing indicators??? makes more sense with web sockets 
+// (do this) proper session handling, js web tokens, password, js web token will be stored, every request sent to server that token is attached and expires after some time, can be stored in request header, avoids leaking credentials
+// error handling, alerts/ui feedback for if something goes wrong, change errors so error message is consister (same type of error message and error number for the same error)
+// - separate files! in future
+// HW: add message metadata to messages (in gc, who sent which message, timestamps), 
+// username < message < timestamp
+// js syntax (freecodecamp + the assignments given), 
+// Learn! --> (for 5-6 more session), session 1: js web tokens (check alex's resources), session 2 & 3: polling
+// and openConvo refactoring (intervals, async) (time consuming), session 4: error handling + ui changes,
+// session 5: [tbd]
 // ========================================================
 // OPEN CONVO
 // ========================================================
 async function openConversation(convoId, title){
     // update chat title with person's name/group name
     ge("chat-title").textContent = title
-    // after this, hide the empty state ("no convo selected") and show chat view
+    // hide the empty state ("no convo selected") and show chat view
     ge("no-convo-selected").classList.add("hidden")
     ge("chat-view").classList.remove("hidden")
 
@@ -91,6 +115,8 @@ async function openConversation(convoId, title){
     displayMessages(data.messages)
     // store convo id in send button --> sendMessage will know where to send messages
     ge("send-button").dataset.convoId = convoId
+    // main goal of this funct: to fetch all messages from sevrr at once and keep it stored locally
+    // but not needed after every message (not effective)
 }
 
 // ========================================================
@@ -126,31 +152,39 @@ function displayMessages(msgs) {
 // ========================================================
 // SEND MESSAGE
 // ========================================================
+// 
 async function sendMessage() {
     // get what the user typed
     const input = ge("message-input")
-    const text = input.value.trim()
+    const text = input.value.trim() //gets rid of extra spacing
 
     // get the convo id stored on the send button
-    const convoId = ge("send-button").dataset.convoId
+    const convoId = ge("send-button").dataset.convoId // way to store elements
+    // need convo id, stored in send button using dataset, how to access convo id? 
+    // thru the send button (BECAUSE we are using send button dataset to access it!)
 
-    // if input is empty, dont send
-    if (!text || !convoId) return
+    // if input is empty dont send (check)
+    if (!text || !convoId) {
+        console.log("No text given or conversation not found.")
+        alert("No text given or conversation not found.")
+        return
+    }
 
-    // call POST /messages/send
+    // call POST /messages/send 
+    // this is frontend talking to backend (how client talks to server), server, using fastAPI (endpoints)
+    // are part of the API interface (this is how it communciates w backend)
     await send("/messages/send", {
         sender: session.email,
         password: session.password,
         conversation_id: parseInt(convoId),  // convert string to number
         message: text
     })
-    //clear input box after sending msg
+    //clear input box after sending msg, message cleared after it's sent
     input.value = ""
 
     //reload so new msg shows
     const title = ge("chat-title").textContent
     openConversation(convoId, title)
-
 }
 
 // ========================================================
