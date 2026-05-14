@@ -106,7 +106,7 @@ async function openConversation(convoId, title){
     // hide the empty state ("no convo selected") and show chat view
     ge("no-convo-selected").classList.add("hidden")
     ge("chat-view").classList.remove("hidden")
-
+    
     const data = await send(`/messages/receive/${convoId}`, {
         email: session.email,
         password: session.password
@@ -279,3 +279,23 @@ loadConversations()
 //displayMessages talks to the DOM and create a bubble and put it on screen
 //- why split?? reusability,  refresh messages every few seconds, you just call openConversation(id) again 
 //and displayMessages handles the rendering automatically -> no need rewrite the display logic
+
+
+// 4/29/26 jwt
+// header, payload, secret
+// signature needs to be uniqur to the content
+// without secret the reuslting signature wil be same for same content --> this is a problem
+// if i had a bunch of tokens i could feed in likely haders and potenial payloads and match the hash, ill know what was used to make the signature
+// secret salt: introduces randomness so that it cannot be recreated, standard to encrypt and decrypt tokens
+// jwt encodes header, payload, signature, 
+// signature is how sever can be expected to decrypt it
+// in payload: encyprpt pword for ex, signature: how do we tell that this stuff is authentic (not fake payload)
+// we encrypt it salt (private key) send it back to cleint
+// when client sends it back to us, bc they encrypted it they know how to decrypt it 
+// kinda like a pword
+// server cretes it w associating info and send it back to client, client sends it back, sever decrypts 
+// and uses info to confirm tht the perosn who sent reqauest was validated
+// tokens are stateless, we dont hv to store it, or track on sever if its valid or invalid
+// ex if someone chages pword u can invalidate token, old token must be invalid after changing pword
+// store token in db or cache, see is this token there? then invalidate it 
+// u must manually invalidate it, can give it a life span
