@@ -4,6 +4,7 @@
 # CORS? security thing
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
+from auth import create_token, verify_token
 
 app = FastAPI()
 app.add_middleware(
@@ -59,13 +60,13 @@ async def signup(request: Request):
 # async def or just def can be used
 async def login(request: Request):
     data = await request.json() 
-
     email = data.get("email")
     password = data.get("password")
     
     success = authenticate_user(email, password)
     if success:
-        return {"message": "Logged in successfully", "received": data}
+        token = create_token(email)  # create token
+        return {"message": "Logged in successfully", "token": token} # send it back
     else:
         return {"message": "Invalid credentials"}
 
@@ -76,20 +77,14 @@ async def login(request: Request):
 # just have messages/send, same for messages/receive
 @app.post("/messages/send")
 async def send_message(request: Request):
-    data = await request.json() 
-    email = data.get("sender")
-    password = data.get("password")
-    # not needed
-    # receiver = data.get("receiver")
-    # update variables
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
+    if email is None:
+        return {"message": "Invalid or expired token"}
+
+    data = await request.json()
     message_text = data.get("message")
     convo_id = data.get("conversation_id")
-
-    if not authenticate_user(email, password):
-        return {"message": "Invalid credentials"} 
-
-    # make funct to chcek if convo id is valid in logic.py
-    # check if user exists in convo with funct in logic.py
     msg_id = save_message(convo_id, email, message_text)
 
     if msg_id is None:
@@ -103,14 +98,15 @@ async def send_message(request: Request):
 
 @app.post("/messages/receive/{conversation_id}")
 async def receive_messages(conversation_id: int, request: Request):
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
+    if email is None:
+        return {"message": "Invalid or expired token"}
+
     data = await request.json()
-    email = data.get("email")
-    password = data.get("password")
-
-    if not authenticate_user(email, password):
-        return {"message": "Invalid credentials"}
-
-    msgs = get_message_by_convo_id(conversation_id)
+    after_id = data.get("after_id")  # will be None if not sent
+    
+    msgs = get_message_by_convo_id(conversation_id, after_id)
     return {"messages": msgs}
 
 # -----------------------------------------------------------
@@ -118,15 +114,14 @@ async def receive_messages(conversation_id: int, request: Request):
 # -----------------------------------------------------------
 @app.post("/conversations/group")
 async def create_group_conversation(request: Request):
-    data = await request.json()
-    email = data.get("email")
-    password = data.get("password")
-    participants = data.get("participants")
-    print(email, password)
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
 
-    if not authenticate_user(email, password):
-        print("authenticate_user entered")
-        return {"message": "Invalid credentials, authentication error"}
+    if email is None:
+        return {"message": "Invalid or expired token"}
+
+    data = await request.json()
+    participants = data.get("participants")
    
     if email not in participants:
         participants.append(email)
@@ -159,31 +154,26 @@ async def create_group_conversation(request: Request):
 # ece 186
 @app.post("/conversations")
 async def get_all_convos(request: Request):
-    data = await request.json()
-    email = data.get("email")
-    password = data.get("password")
-
-    if not authenticate_user(email, password):
-        return {"message": "Invalid credentials"}
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
+    if email is None:
+        return {"message": "Invalid or expired token"}
 
     conversations = list_user_conversations(email)
-
     return {
         "conversations": conversations
     }
-    # call logic.py funct
-    # return all convo ids
+
 
 @app.post("/conversations/direct")
 async def create_direct_conversation(request: Request):
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
+    if email is None:
+        return {"message": "Invalid or expired token"}
+
     data = await request.json()
-
-    email = data.get("email")
-    password = data.get("password")
     other_user = data.get("other_user")
-
-    if not authenticate_user(email, password):
-        return {"message": "Invalid credentials, email is invalid"}
 
     if not user_exists(other_user):
         return {"message": "Invalid credentials, other email provided is invalid"}
@@ -203,18 +193,14 @@ async def create_direct_conversation(request: Request):
 #---------------------------------------------------------------------------------
 @app.delete("/conversations/{conversation_id}")
 async def delete_conversation_endpoint(conversation_id: int, request: Request):
-    data = await request.json()
-    email = data.get("email")
-    password = data.get("password")
-
-    if not authenticate_user(email, password):
-        return {"message": "Invalid credentials"}
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
+    if email is None:
+        return {"message": "Invalid or expired token"}
 
     success = delete_conversation(conversation_id, email)
-
     if not success:
         return {"message": "Conversation not found/access denied"}
-
     return {
         "message": "Conversation deleted",
         "conversation_id": conversation_id
@@ -334,3 +320,4 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
             # to authenticate user first, read messages from DB, send them back to the client as JSON
     # 4. logic.py - added helper function get_all_messages() so that server can fetch messages
     # 5. 
+

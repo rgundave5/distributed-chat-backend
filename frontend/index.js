@@ -66,13 +66,18 @@ function authentication(email, pword) {
 // SEND: can be reused
 // ----------------------------------------------------------------------------
 async function send(path, body) {
+    const token = localStorage.getItem("token")
+    const headers = { "Content-Type": "application/json" }
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`  // only add if token exists
+    }
+    
     const response = await fetch(`${BASEAPI}${path}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify(body)
     })
     const data = await response.json()
-    console.log("response from", path, data)
     return data
 }
 
@@ -90,14 +95,9 @@ async function login(){
     const data = await send("/login", { email: email, password: pword }) // STEP 3
 
     if (data.message === "Logged in successfully") {
-        openMessenger(email, pword) // STEP 4 (page will change)
-        // classList is the list of CSS classes on an element.
-        //.add("hidden") hides the login page. 
-        //.remove("hidden") reveals the app page.
-        // in css, u can style conrtent w ids or classname, built in class name is "hidden" -> changes visibility
-        // therefore: auth-screen is hidden and app screen is not hidden (.remove)
-        // ""
-    } else { // OR STEP 4
+        localStorage.setItem("token", data.token)  // store  token
+        openMessenger(email)  //  password not needed anymore
+    } else {
         ge("auth-error").textContent = "Invalid email or password."
     }
     // .value: html is hierarchial, mainelement.property/.method, dot syntax used a lot
@@ -131,9 +131,8 @@ async function signup() {
 // -----------------------------------------------------------------------------
 // Open Messenger: sets property of page
 // -----------------------------------------------------------------------------
-function openMessenger(email, pword) {
+function openMessenger(email) {
     localStorage.setItem("email", email)
-    localStorage.setItem("password", pword)
     window.location.href = "messaging.html"
     // connects this to messaging page
     // iinstead of doing hidden and remove, use this function instead

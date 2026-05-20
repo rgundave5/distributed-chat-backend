@@ -1,3 +1,5 @@
+// state manager
+const conversationState = {}
 
 const ADDRESS = "127.0.0.1"
 const PORT = 8000
@@ -6,21 +8,36 @@ const BASEAPI = `http://${ADDRESS}:${PORT}`
 function ge(id) {
     return document.getElementById(id)
 }
-// Every API call in messaging.js:
-//      1. make a POST request
-//      2. send JSON in the body
-//      3. get JSON back
-// instead of rewriting fetch block inside every function, 
-// you write it once in send() and every function just calls it:
+
+// ========================================================
+// SEND
+// ========================================================
 async function send(path, body) {
+    const token = localStorage.getItem("token")
+    const headers = { "Content-Type": "application/json" }
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`
+    }
     const response = await fetch(`${BASEAPI}${path}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify(body)
     })
     const data = await response.json()
-    console.log("response from", path, data)
     return data
+}
+
+// ========================================================
+// INIT CONVO STATE
+// ========================================================
+function initConvoState(convoId) {
+    // check if convo state already exists before creating one (avoid wiping existing data)
+    if(!(convoId in conversationState)){
+        conversationState[convoId] = {
+            messages: [],
+            lastMessageId: 0, // 0 because nothing is loaded yet
+        }
+    }
 }
 
 // ========================================================
@@ -44,11 +61,7 @@ ge("current-user-label").textContent = session.email
 // LOAD CONVO
 // ========================================================
 async function loadConversations(){
-    // call POST 
-    const data = await send("/conversations", {
-        email: session.email,
-        password: session.password
-    })
+    const data = await send("/conversations", {})
     // get the convo list element from the DOM
     const convoList = ge("convo-list")
     convoList.innerHTML = ""  // clear before adding new items (avoids duplicates)
@@ -103,20 +116,24 @@ async function loadConversations(){
 async function openConversation(convoId, title){
     // update chat title with person's name/group name
     ge("chat-title").textContent = title
-    // hide the empty state ("no convo selected") and show chat view
     ge("no-convo-selected").classList.add("hidden")
     ge("chat-view").classList.remove("hidden")
-    
-    const data = await send(`/messages/receive/${convoId}`, {
-        email: session.email,
-        password: session.password
-    })
-    // now actually show the messages
-    displayMessages(data.messages)
-    // store convo id in send button --> sendMessage will know where to send messages
     ge("send-button").dataset.convoId = convoId
-    // main goal of this funct: to fetch all messages from sevrr at once and keep it stored locally
-    // but not needed after every message (not effective)
+    
+    initConvoState(convoId)
+    // fetch all messages only if we havent loaded this convo before
+    if(conversationState[convoId].messages.length == 0){
+        const data = await send(`/messages/receive/${convoId}`, {}) // ask server for all messages in this convo
+        conversationState[convoId].messages = data.messages // take msgs the server sent back and store them in local state --> memory
+        
+        // ensure the code above worked and there actually are messages (avoid crashes)
+        if(data.messages.length > 0) {
+            conversationState[convoId].lastMessageId = data.messages.at(-1).id // get msg id of last message and store in state
+            // to be able to "get msgs after this id"
+        }
+    }
+    // display whats in state
+    displayMessages(conversationState[convoId].messages)
 }
 
 // ========================================================
@@ -125,24 +142,40 @@ async function openConversation(convoId, title){
 function displayMessages(msgs) {
     const feed = ge("messages-feed")
     
-    //clear old msgs
+    //clear old msgs (wipe the UI -> no nee dto do that)
+    // instead, displayMessages will open msgs for first time and store in js dict, call append messages (youll get new msgs)
     feed.innerHTML = ""
 
     //loop thru each msg
     msgs.forEach(msg => {
-        //create div for each message
-        const div = document.createElement("div")
+        const div = document.createElement("div") // create new element in DOM for each message
         div.classList.add("message")
-        // CSS uses .message.sent and .message.received to make 
-        // sent messages go right and received go left
-        if(msg.sender == session.email){
+        if (msg.sender === session.email) {
             div.classList.add("sent")
         } else {
             div.classList.add("received")
         }
-        // text content
-        div.textContent = msg.message
-        //add to chat feed
+
+        // add sender name
+        const sender = document.createElement("div")
+        sender.classList.add("message-sender")
+        sender.textContent = msg.sender 
+
+        // add message text
+        const text = document.createElement("div")
+        text.classList.add("message-text")
+        text.textContent = msg.message // put the actual message text inside the div
+
+        // add timestamp
+        const time = document.createElement("div")
+        time.classList.add("message-time")
+        time.textContent = new Date(msg.date).toLocaleTimeString()
+
+        // attach the div to the chat feed so it shows on screen
+        div.appendChild(sender)
+        div.appendChild(text)
+        div.appendChild(time)
+
         feed.appendChild(div)
     })
     // scroll to the bottom so latest message is visible
@@ -152,39 +185,34 @@ function displayMessages(msgs) {
 // ========================================================
 // SEND MESSAGE
 // ========================================================
-// 
 async function sendMessage() {
-    // get what the user typed
     const input = ge("message-input")
-    const text = input.value.trim() //gets rid of extra spacing
-
-    // get the convo id stored on the send button
-    const convoId = ge("send-button").dataset.convoId // way to store elements
+    const text = input.value.trim()
+    const convoId = ge("send-button").dataset.convoId 
     // need convo id, stored in send button using dataset, how to access convo id? 
     // thru the send button (BECAUSE we are using send button dataset to access it!)
+    // not good practice tho: maybe convo id is stored in side bar, so when convo is clicked, covo id is stored in local storage
 
     // if input is empty dont send (check)
     if (!text || !convoId) {
-        console.log("No text given or conversation not found.")
         alert("No text given or conversation not found.")
         return
     }
 
-    // call POST /messages/send 
-    // this is frontend talking to backend (how client talks to server), server, using fastAPI (endpoints)
-    // are part of the API interface (this is how it communciates w backend)
-    await send("/messages/send", {
-        sender: session.email,
-        password: session.password,
-        conversation_id: parseInt(convoId),  // convert string to number
+    const data = await send("/messages/send/", {
+        conversation_id: parseInt(convoId),
         message: text
     })
-    //clear input box after sending msg, message cleared after it's sent
-    input.value = ""
 
-    //reload so new msg shows
-    const title = ge("chat-title").textContent
-    openConversation(convoId, title)
+    input.value = ""
+    // append the one message that was sent
+    appendMessages(convoId, [{
+        sender: session.email,
+        message: text,
+        id: data.message_id,
+        date: new Date().toISOString()
+    }])
+    // no need to reload anymore
 }
 
 // ========================================================
@@ -195,8 +223,6 @@ async function createDirect() {
     if (!otherUser) return
 
     const data = await send("/conversations/direct", {
-        email: session.email,
-        password: session.password,
         other_user: otherUser
     })
 
@@ -222,8 +248,6 @@ async function createGroup() {
     const participants = emailsRaw.split("\n").map(e => e.trim()).filter(e => e)
 
     const data = await send("/conversations/group", {
-        email: session.email,
-        password: session.password,
         name: name,
         participants: participants
     })
@@ -239,34 +263,95 @@ async function createGroup() {
 }
 
 // ========================================================
+// APPEND MESSAGES 
+// ========================================================
+// goal: add new messages (param is an array) to local state and display them without redrawing the whole chat
+function appendMessages(convoId, newMessages) {
+    newMessages.forEach(msg => {
+        conversationState[convoId].messages.push(msg) // add each new msg from the newMessages array to the convo state's messages array
+    })
+    // add the new messages to the feed
+    const feed = ge("messages-feed")
+    newMessages.forEach(msg => {
+        const div = document.createElement("div") // create new element in DOM for each message
+        div.classList.add("message")
+        if (msg.sender === session.email) {
+            div.classList.add("sent")
+        } else {
+            div.classList.add("received")
+        }
+
+        // add sender name
+        const sender = document.createElement("div")
+        sender.classList.add("message-sender")
+        sender.textContent = msg.sender 
+
+        // add message text
+        const text = document.createElement("div")
+        text.classList.add("message-text")
+        text.textContent = msg.message // put the actual message text inside the div
+
+        // add timestamp
+        const time = document.createElement("div")
+        time.classList.add("message-time")
+        time.textContent = new Date(msg.date).toLocaleTimeString()
+
+        // attach the div to the chat feed so it shows on screen
+        div.appendChild(sender)
+        div.appendChild(text)
+        div.appendChild(time)
+
+        feed.appendChild(div)
+    })
+    if (newMessages.length > 0) {
+        conversationState[convoId].lastMessageId = newMessages.at(-1).id
+    }
+    // scroll down so last message is visible
+    feed.scrollTop = feed.scrollHeight
+}  
+
+
+// ========================================================
 // EVENT LISTENERS
 // ========================================================
 ge("send-button").addEventListener("click", sendMessage)
-ge("refresh-button").addEventListener("click", () => {
+
+ge("refresh-button").addEventListener("click", async() => {
     const convoId = ge("send-button").dataset.convoId
-    const title = ge("chat-title").textContent
-    if (convoId) openConversation(convoId, title)
+    if (!convoId) return
+
+    const lastId = conversationState[convoId].lastMessageId
+
+    const data = await send(`/messages/receive/${convoId}`, {
+        after_id: lastId  // only fetch messages after what we already have
+    })
+
+    if (data.messages.length > 0) {
+        appendMessages(convoId, data.messages)
+    }
 })
-// show input when + Direct Chat clicked
+
 ge("new-direct-btn").addEventListener("click", () => {
     ge("direct-chat-input").classList.toggle("hidden")
 })
+
 ge("direct-submit-btn").addEventListener("click", createDirect)
 
 ge("new-group-btn").addEventListener("click", () => {
     ge("group-chat-input").classList.toggle("hidden")
 })
+
 ge("group-submit-btn").addEventListener("click", createGroup)
 
 ge("logout-btn").addEventListener("click", () => {
     localStorage.clear()
     window.location.href = "index.html"
 })
+
 ge("message-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") sendMessage()
 })
 
-// load conversations when page opens
 loadConversations()
 
 //functions: funct, what it does, endpoint
@@ -299,3 +384,21 @@ loadConversations()
 // ex if someone chages pword u can invalidate token, old token must be invalid after changing pword
 // store token in db or cache, see is this token there? then invalidate it 
 // u must manually invalidate it, can give it a life span
+
+// 5/19 long polling with setInterval
+// 1. variable to track the interval so you can stop it: javascriptlet pollInterval = null
+// 2. startPolling() and stopPolling() functions
+// Start polling when a conversation is opened, stop when user logs out or switches away
+//      in openConversation, at the very end: startPolling(convoId)
+//       in logout event listener add stopPolling()
+// always clearInterval at the start of startPolling    -> cant have two polls running at the same time
+/* user opens convo
+→ openConversation loads messages
+→ startPolling begins
+    → every 1 second: ask server for messages after lastMessageId
+    → if new messages exist: appendMessages adds them to screen
+    → lastMessageId updates automatically inside appendMessages
+user switches convo
+→ startPolling called again
+→ clearInterval kills the old poll
+→ new poll starts for new convo */

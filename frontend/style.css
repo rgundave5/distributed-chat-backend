@@ -168,6 +168,37 @@ body {
 }
 
 /* =============================================
+   MESSAGE METADATA
+============================================= */
+.message-sender {
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.message-text {
+    font-size: 0.95rem;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.message.sent .message-sender {
+    display: none;  /* hide the sender name on your own messages */
+}
+
+.message.sent .message-time {
+    text-align: right;
+}
+
+.message.received .message-time {
+    text-align: left;
+}
+
+/* =============================================
    HIDDEN CLASS
 ============================================= */
 .hidden {

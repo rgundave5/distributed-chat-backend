@@ -10,18 +10,23 @@ TOKEN_EXPIRY_MINUTES = 60 * 24 * 7 # how to pick this number, if less secrue (on
 
 def create_token(email):
     payload = {
-        "email": email, # "", name of the key is literally "email"
-        "expiryDate": datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRY_MINUTES) # utc is undefined
+        "sub": email, # "", name of the key is literally "email"
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRY_MINUTES) # utc is undefined
+        # standard JWT convention is "sub"
         # common syntax, named params
     }
     token = jwt.encode(payload, KEY, ALGORITHM) # correct order
     return token
 
 def verify_token(token):
-    algorithm_arr = [ALGORITHM]
-    payload = jwt.decode(token, KEY, algorithm_arr) 
-    if paylod.expiryDate > 
-    return email
+    try:
+        payload = jwt.decode(token, KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub") 
+        return email  # returns None automatically if "sub" isn't there
+    except jwt.ExpiredSignatureError:
+        return None  # token expired
+    except jwt.InvalidTokenError:
+        return None  # signature is wrong or token is fake
 
 # finish this, get verify_token working
 # implement these methods in ALL backend (whenever doing auth, use these functs, during signup login, send token
