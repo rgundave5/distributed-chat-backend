@@ -48,11 +48,8 @@ function initConvoState(convoId) {
 function getSession() {
     const email = localStorage.getItem("email")
     const password = localStorage.getItem("password")
-    console.log("session:", email)
-    return {
-        email: email,
-        password: password
-    }
+    const token = localStorage.getItem("token")
+    return { email, password, token }
 }
 const session = getSession()
 ge("current-user-label").textContent = session.email
@@ -134,6 +131,7 @@ async function openConversation(convoId, title){
     }
     // display whats in state
     displayMessages(conversationState[convoId].messages)
+    startPolling(convoId); 
 }
 
 // ========================================================
@@ -310,6 +308,66 @@ function appendMessages(convoId, newMessages) {
     feed.scrollTop = feed.scrollHeight
 }  
 
+// POLLING (5/22)
+// we only hv one convo open at a time, polling for all or just one that's open? do polling for just convo open --> could do notifications later
+
+let pollInterval = null;
+
+function startPolling(convoId) {
+    stopPolling(); // avoid stacked intervals
+    // we need to know which convo is open, so pass convoId (modify openConvo later)
+
+    // function setInterval(handler: TimerHandler, timeout?: number, ...arguments: any[]): number
+    // aysnc arrow function: create anonymous functs and pass it in somewhere, it will be called when it needs to be
+    // "single use" function (won't be used elsewhere) --> cleaner code
+    pollInterval = setInterval(async () => {
+        try {
+            const lastId = conversationState[convoId].lastMessageId
+
+            const data = await send(`/messages/receive/${convoId}`, {
+                after_id: lastId  // only fetch messages after what we already have
+            })
+
+            if (data.messages.length > 0) {
+                appendMessages(convoId, data.messages)
+            }
+        } catch (error) {
+            // if send message messes up (invalid convo id for ex), if we dont handle error it could crash
+            // prints error and error itself
+            console.error("Polling error", error)
+        }
+        
+    }, 1000) // 1 second timeout (in ms)
+}
+
+function stopPolling() {
+    // !== is a strict equal, ex: strict equal of "5" === 5 --> false
+    if (pollInterval !== null) {
+        clearInterval(pollInterval); 
+        pollInterval = null;
+    } 
+}
+// if we logoit, pollinterval will get wiped, so we need to save it to be able to stopPolling
+
+async function longPoll(convoId, lastId) {
+    if (ge("send-button").dataset.convoId != convoId) return // stop if user switched convos!!!
+    lastId = conversationState[convoId].lastMessageId
+    try {
+        const response = await fetch(`${BASEAPI}/poll/${convoId}?last_id=${lastId}`, {
+            method: "GET",
+            headers: {"Authorization": `Bearer ${session.token}`}
+        })
+        const data = await response.json()
+        if (data.messages && data.messages.length > 0) {
+            displayMessages(data.messages)
+            lastId = data.messages[data.messages.length - 1].id
+        }
+    } catch (e) {
+        console.log("poll error:", e)
+    }
+    // immediately poll again
+    longPoll(convoId, lastId)
+}
 
 // ========================================================
 // EVENT LISTENERS
@@ -344,6 +402,7 @@ ge("new-group-btn").addEventListener("click", () => {
 ge("group-submit-btn").addEventListener("click", createGroup)
 
 ge("logout-btn").addEventListener("click", () => {
+    stopPolling() 
     localStorage.clear()
     window.location.href = "index.html"
 })
@@ -392,6 +451,7 @@ loadConversations()
 //      in openConversation, at the very end: startPolling(convoId)
 //       in logout event listener add stopPolling()
 // always clearInterval at the start of startPolling    -> cant have two polls running at the same time
+
 /* user opens convo
 → openConversation loads messages
 → startPolling begins
@@ -402,3 +462,49 @@ user switches convo
 → startPolling called again
 → clearInterval kills the old poll
 → new poll starts for new convo */
+
+/* SENDING MESSAGE
+user types message and hits send
+    → sendMessage() runs
+    → checks text and convoId exist
+    → calls send("/messages/send", { conversation_id, message })
+        → send() grabs token from localStorage
+        → attaches it to Authorization header
+        → POST request goes to server
+            → server extracts token from header
+            → verify_token() checks signature + expiry
+            → extracts email from token (this is the sender)
+            → save_message(convo_id, email, message_text) saves to DB
+            → returns { message_id }
+    → back in sendMessage(), input box is cleared
+    → appendMessages() called with the new message
+        → pushed to conversationState[convoId].messages
+        → new div created and added to feed
+        → lastMessageId updated
+        → feed scrolls to bottom
+
+RECEIVING MESSAGE
+setInterval fires every 1 second
+    → calls send("/messages/receive/{convoId}", { after_id: lastMessageId })
+        → send() attaches token to header
+        → POST request goes to server
+            → server verifies token
+            → calls get_message_by_convo_id(convoId, after_id)
+                → queries DB for messages WHERE id > after_id
+                → returns only new messages
+    → back in polling loop:
+        → if data.messages.length > 0:
+            → appendMessages() adds them to screen
+            → lastMessageId updates to newest message id
+        → if empty: nothing happens, wait for next tick */
+
+
+/* 5/22 homework
+- fix time stamps (timezone could be different)
+- look into web sockets (for now use long polling) - natural next step (complex)
+- next session: proper error handling and UI changes
+- short polling real world ex: job scheduler (Check data in near real time but no need for it toe openm for long)
+- long polling ex: ebay live auction
+- HW: proper error handling and UI changes (Start), make a list of the changes u wanna make in UI, look into long polling (python allows for this - fastAPI, js doesnt) --> where u stored HTTP endpoints (Client.py)
+- find errors: clear db and try using it normally, stop server, restart it (for timestamp issue),play around
+*/

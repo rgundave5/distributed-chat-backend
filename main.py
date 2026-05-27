@@ -5,6 +5,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
 from auth import create_token, verify_token
+import asyncio
 
 app = FastAPI()
 app.add_middleware(
@@ -18,7 +19,7 @@ from logic import (
     add_user,
     authenticate_user,
     save_message,
-    get_message_by_convo_id,
+    message_by_convo_id,
     create_group_convo,
     list_user_conversations,
     get_or_create_direct_conversation,
@@ -106,7 +107,7 @@ async def receive_messages(conversation_id: int, request: Request):
     data = await request.json()
     after_id = data.get("after_id")  # will be None if not sent
     
-    msgs = get_message_by_convo_id(conversation_id, after_id)
+    msgs = message_by_convo_id(conversation_id, after_id)
     return {"messages": msgs}
 
 # -----------------------------------------------------------
@@ -206,6 +207,22 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
         "conversation_id": conversation_id
     }
 
+# long polling endpoint, using token auth
+@app.get("/poll/{convo_id}")
+async def poll(convo_id: int, last_id: int, request: Request):
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    email = verify_token(token)
+    if email is None:
+        return {"message": "Invalid or expired token"}
+
+    while True:
+        new_msgs = messages_after(convo_id, last_id)
+        if new_msgs:
+            return {"messages": new_msgs}
+        await asyncio.sleep(1)
+
+
+
 # 2/26
 # CL interface, two termiinals to send messages 
     # 2 ways to go ab it: python based (easier), or website (web app that connects to server w login) --> css
@@ -236,7 +253,7 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
 #   Chat System System Design
 #   Distributed Systems
 # Understanding existing code: 
-# HW: finished get_messages_by_convo_id, save_messages
+# HW: finished messages_by_convo_id, save_messages
 
 # 12/30
 # finish get_messages_by_convo_id in logic.py

@@ -150,7 +150,7 @@ def create_group_convo(gc_name, participants_array):
 # -----------------------------------------------------------------------------------
 # returns messages in convo up to the limit
 # OR returns messages after message_id 
-def get_message_by_convo_id(conversation_id, after_message_id=None, limit=50):
+def message_by_convo_id(conversation_id, after_message_id=None, limit=50):
     # limit variable to avoid spamming
     # message_id var in case user wants 
     try:
