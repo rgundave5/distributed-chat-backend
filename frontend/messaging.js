@@ -24,6 +24,12 @@ async function send(path, body) {
         body: JSON.stringify(body)
     })
     const data = await response.json()
+    if (!response.ok) {
+        // response.ok is automatically false when status is 400, 401, 404, 500 etc
+        // data.detail is where FastAPI puts  HTTPException message
+        showError(data.detail || "Something went wrong")
+        return null
+    }
     return data
 }
 
@@ -59,6 +65,8 @@ ge("current-user-label").textContent = session.email
 // ========================================================
 async function loadConversations(){
     const data = await send("/conversations", {})
+    if (!data) return
+
     // get the convo list element from the DOM
     const convoList = ge("convo-list")
     convoList.innerHTML = ""  // clear before adding new items (avoids duplicates)
@@ -121,6 +129,8 @@ async function openConversation(convoId, title){
     // fetch all messages only if we havent loaded this convo before
     if(conversationState[convoId].messages.length == 0){
         const data = await send(`/messages/receive/${convoId}`, {}) // ask server for all messages in this convo
+        if (!data) return
+        
         conversationState[convoId].messages = data.messages // take msgs the server sent back and store them in local state --> memory
         
         // ensure the code above worked and there actually are messages (avoid crashes)
@@ -131,7 +141,7 @@ async function openConversation(convoId, title){
     }
     // display whats in state
     displayMessages(conversationState[convoId].messages)
-    longPoll(convoId, lastId) 
+    startPolling(convoId)
 }
 
 // ========================================================
@@ -193,15 +203,14 @@ async function sendMessage() {
 
     // if input is empty dont send (check)
     if (!text || !convoId) {
-        alert("No text given or conversation not found.")
+        showError("No text given or conversation not found.")
         return
     }
-
     const data = await send("/messages/send/", {
         conversation_id: parseInt(convoId),
         message: text
     })
-
+    if (!data) return
     input.value = ""
     // append the one message that was sent
     appendMessages(convoId, [{
@@ -223,7 +232,7 @@ async function createDirect() {
     const data = await send("/conversations/direct", {
         other_user: otherUser
     })
-
+    if (!data) return
     console.log("create direct response:", data)
 
     if (data.conversation_id) {
@@ -250,6 +259,7 @@ async function createGroup() {
         participants: participants
     })
 
+    if (!data) return
     console.log("create group response:", data)
 
     if (data.conversation_id) {
@@ -323,14 +333,23 @@ function startPolling(convoId) {
     pollInterval = setInterval(async () => {
         try {
             const lastId = conversationState[convoId].lastMessageId // we should update that once we get messages froms erver 5/27
+            const data = await send(`/messages/receive/${convoId}`, { after_id: lastId })
+            if (!data) return
+            if (data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    conversationState[convoId].messages.push(msg)
+                })
+                conversationState[convoId].lastMessageId = data.messages.at(-1).id
+            }
 
-            const data = await send(`/messages/receive/${convoId}`, {
-                after_id: lastId  // only fetch messages after what we already have
-            })
+            // only display if user is still on this convo
+            const activeConvoId = ge("send-button").dataset.convoId
+            if (activeConvoId != convoId) return  // switched convos, so don't show on screen
 
             if (data.messages.length > 0) {
                 appendMessages(convoId, data.messages)
             }
+
         } catch (error) {
             // if send message messes up (invalid convo id for ex), if we dont handle error it could crash
             // prints error and error itself
@@ -372,6 +391,23 @@ async function longPoll(convoId, lastId) {
 }
 
 // ========================================================
+// ERROR HANDLING
+// ========================================================
+let errorTimeout = null
+
+function showError(message) {
+    const box = ge("error-toast")
+    box.textContent = message
+    box.classList.remove("hidden")
+    
+    // if already a timer running, reset it
+    clearTimeout(errorTimeout)
+    errorTimeout = setTimeout(() => {
+        box.classList.add("hidden")
+    }, 3000)
+}
+
+// ========================================================
 // EVENT LISTENERS
 // ========================================================
 ge("send-button").addEventListener("click", sendMessage)
@@ -379,13 +415,11 @@ ge("send-button").addEventListener("click", sendMessage)
 ge("refresh-button").addEventListener("click", async() => {
     const convoId = ge("send-button").dataset.convoId
     if (!convoId) return
-
     const lastId = conversationState[convoId].lastMessageId
-
     const data = await send(`/messages/receive/${convoId}`, {
         after_id: lastId  // only fetch messages after what we already have
     })
-
+    if (!data) return
     if (data.messages.length > 0) {
         appendMessages(convoId, data.messages)
     }

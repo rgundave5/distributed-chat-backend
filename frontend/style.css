@@ -167,6 +167,19 @@ body {
     font-size: 0.85rem;
 }
 
+#error-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff3b30;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    z-index: 999;
+}
+
 /* =============================================
    MESSAGE METADATA
 ============================================= */

@@ -3,7 +3,7 @@
 
 # CORS? security thing
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from auth import create_token, verify_token
 import asyncio
 
@@ -48,11 +48,14 @@ async def signup(request: Request):
     email = data.get("email")
     password = data.get("password")
     
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+    
     success = add_user(email, password)
-    if success: 
-        return {"message": "Data stored successfully", "email": email}  # success message
+    if not success: 
+        raise HTTPException(status_code=409, detail="Email already in use")
     else:
-        return {"message": "Error storing data"}
+        return {"message": "Data stored successfully", "email": email}
 
 # login funct - when user logs in, send email, pword --> check if it exists in table --> return true
 @app.post("/login")
@@ -64,12 +67,14 @@ async def login(request: Request):
     email = data.get("email")
     password = data.get("password")
     
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
     success = authenticate_user(email, password)
-    if success:
-        token = create_token(email)  # create token
-        return {"message": "Logged in successfully", "token": token} # send it back
-    else:
-        return {"message": "Invalid credentials"}
+    if not success:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_token(email)
+    return {"message": "Logged in successfully", "token": token}
 
 
 # ------------------------------------------------------
@@ -81,16 +86,21 @@ async def send_message(request: Request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     email = verify_token(token)
     if email is None:
-        return {"message": "Invalid or expired token"}
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     data = await request.json()
     message_text = data.get("message")
     convo_id = data.get("conversation_id")
+    
+    if not message_text or not message_text.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if convo_id is None:
+        raise HTTPException(status_code=400, detail="Missing conversation_id")
+
     msg_id = save_message(convo_id, email, message_text)
 
     if msg_id is None:
-        return {"message": "Not authorized or conversation invalid"}
-
+        raise HTTPException(status_code=403, detail="Not authorized or conversation not found")
     return {
         "message": "Sent",
         "conversation_id": convo_id,
@@ -102,12 +112,15 @@ async def receive_messages(conversation_id: int, request: Request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     email = verify_token(token)
     if email is None:
-        return {"message": "Invalid or expired token"}
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     data = await request.json()
     after_id = data.get("after_id")  # will be None if not sent
     
     msgs = message_by_convo_id(conversation_id, after_id)
+    if msgs is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
     return {"messages": msgs}
 
 # -----------------------------------------------------------
@@ -119,7 +132,7 @@ async def create_group_conversation(request: Request):
     email = verify_token(token)
 
     if email is None:
-        return {"message": "Invalid or expired token"}
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     data = await request.json()
     participants = data.get("participants")
@@ -127,14 +140,14 @@ async def create_group_conversation(request: Request):
     if email not in participants:
         participants.append(email)
     
-    for key in participants:
-        if user_exists(key) is False: 
-            return {"message": "Invalid credentials, participants are invalid"}
+    for participant in participants:
+        if not user_exists(participant):
+            raise HTTPException(status_code=404, detail=f"{participant} does not exist")
 
     convo_id = create_group_convo(data.get("name"), participants)
 
     if convo_id is None:
-        return {"message": "Failed to create group"}
+        raise HTTPException(status_code=500, detail="Something went wrong")
 
     return {
         "message": "Group created",
@@ -158,31 +171,32 @@ async def get_all_convos(request: Request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     email = verify_token(token)
     if email is None:
-        return {"message": "Invalid or expired token"}
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     conversations = list_user_conversations(email)
-    return {
-        "conversations": conversations
-    }
+    if conversations is None:
+        raise HTTPException(status_code=500, detail="Something went wrong")
 
+    return {"conversations": conversations}
 
 @app.post("/conversations/direct")
 async def create_direct_conversation(request: Request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     email = verify_token(token)
     if email is None:
-        return {"message": "Invalid or expired token"}
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     data = await request.json()
     other_user = data.get("other_user")
 
+    if not other_user:
+        raise HTTPException(status_code=400, detail="Missing other_user field")
     if not user_exists(other_user):
-        return {"message": "Invalid credentials, other email provided is invalid"}
-
+        raise HTTPException(status_code=404, detail="User not found")
     convo_id = get_or_create_direct_conversation(email, other_user)
 
     if convo_id is None:
-        return {"message": "Failed to create group"}
+        raise HTTPException(status_code=500, detail="Something went wrong")
 
     return {
         "message": "Direct conversation created",
