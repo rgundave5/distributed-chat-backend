@@ -201,7 +201,15 @@ async def delete_conversation_endpoint(conversation_id: int, request: Request):
 
     success = delete_conversation(conversation_id, email)
     if not success:
-        return {"message": "Conversation not found/access denied"}
+        return {"message": "Conversation not found/access denied"} # we don't know which error specifically
+        # 5/27 we need better error handling, 
+        # on client side, we need to see error code, we need way to standarize them
+        # "converstaion 123 not found" --> error message, short status codes are better
+        # "conversation_id does not exist" ==> standardize it (check wikipedia status code http)
+        # gives user more context on what went wrong/how to fix it
+        # same for client, BUT not too much info, keep it vagie
+        #   ex: if client is malicious, we cant give away too much, js say smt went wrong
+        #   if you give away too much, info leaks
     return {
         "message": "Conversation deleted",
         "conversation_id": conversation_id

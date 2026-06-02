@@ -269,7 +269,7 @@ def delete_conversation(convo_id, requester_email):
             return True
 
     except Exception as e:
-        print("Error deleting conversation:", e)
+        print("Error deleting conversation:", e) # 5/27 
         return False
 
 # 1/29

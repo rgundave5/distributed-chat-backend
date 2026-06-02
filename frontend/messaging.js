@@ -131,7 +131,7 @@ async function openConversation(convoId, title){
     }
     // display whats in state
     displayMessages(conversationState[convoId].messages)
-    startPolling(convoId); 
+    longPoll(convoId, lastId) 
 }
 
 // ========================================================
@@ -322,7 +322,7 @@ function startPolling(convoId) {
     // "single use" function (won't be used elsewhere) --> cleaner code
     pollInterval = setInterval(async () => {
         try {
-            const lastId = conversationState[convoId].lastMessageId
+            const lastId = conversationState[convoId].lastMessageId // we should update that once we get messages froms erver 5/27
 
             const data = await send(`/messages/receive/${convoId}`, {
                 after_id: lastId  // only fetch messages after what we already have
@@ -351,7 +351,8 @@ function stopPolling() {
 
 async function longPoll(convoId, lastId) {
     if (ge("send-button").dataset.convoId != convoId) return // stop if user switched convos!!!
-    lastId = conversationState[convoId].lastMessageId
+    // 5/27, 
+    lastId = conversationState[convoId].lastMessageId // lastid = local copy not real thing
     try {
         const response = await fetch(`${BASEAPI}/poll/${convoId}?last_id=${lastId}`, {
             method: "GET",
@@ -360,13 +361,14 @@ async function longPoll(convoId, lastId) {
         const data = await response.json()
         if (data.messages && data.messages.length > 0) {
             displayMessages(data.messages)
-            lastId = data.messages[data.messages.length - 1].id
-        }
+            conversationState[convoId].lastMessageId = data.messages[data.messages.length - 1].id // udpates now
+        } 
     } catch (e) {
         console.log("poll error:", e)
     }
     // immediately poll again
     longPoll(convoId, lastId)
+    // update here too when we get data from server 5/27
 }
 
 // ========================================================
@@ -507,4 +509,34 @@ setInterval fires every 1 second
 - long polling ex: ebay live auction
 - HW: proper error handling and UI changes (Start), make a list of the changes u wanna make in UI, look into long polling (python allows for this - fastAPI, js doesnt) --> where u stored HTTP endpoints (Client.py)
 - find errors: clear db and try using it normally, stop server, restart it (for timestamp issue),play around
+*/
+
+/* 5/27
+- make an actual alert pop up when an error happens
+- could make chat more interactive, disable send button when loading convos (for ex)
+- give upper bound for how long it polls like ten seconds in longpoll()
+- we do long polling for 30 sec of convo id 1, its on server, sevrer is waiting for 30 sec, what of
+user switches to convo id 2, (think ab this) --> client should save the data but dont display unless 
+the user clicks the convo again
+    do simialr check: if (ge("send-button").dataset.convoId != convoId) return // stop if user switched convos!!!
+    store the last convo id in the state of the convo, and save the messages returned too --> work w appendMessages()
+    using this code: newMessages.forEach(msg => {
+        conversationState[convoId].messages.push(msg) // add each new msg from the newMessages array to the convo state's messages array
+    })
+    - get last msg id, store the 
+    - try long polling for two convos at same time (do testing) - check if fastapi can handle it
+- we gotta make sure we can check for the awaits
+
+- add standardized error responses from server (refer to wiki page), specific message for client, but vague if server breaks
+- right now, we just return 200 error + an error message (default smt went wrong) --> we need HTTP exception
+- fastAPI has HTTP error module, returns specific error code + json body (Wtv u want - specific app error code + error msg)
+- we assume the request body is corect info but what if its wrong --> we nee dto do validation (adding checks, empty msg? missing convo id? duplocate users? for ex)
+- do validation for every endpoint 
+
+- we need to amke sure client can HANDLE the errors (Ex: if convo id doesnt exist, then delete the convo) 
+- pply to ogin, send/delete/receeve messages (handle the response)
+
+- db stuff is wrapped in try catch --> have better messages of what went wrong
+- create different function in messaging.js thats a certified error handler, pop up box of error message and goes away after 3 sec
+timeout, if theres a new error messsage, it resets the 3 sec timer
 */
